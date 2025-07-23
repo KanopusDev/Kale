@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Status - Kale Email API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script>
+        // Auto-refresh every 30 seconds
+        setTimeout(() => location.reload(), 30000);
+    </script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-indigo-600">Kale</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Home</a>
+                    <a href="/dashboard" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
+                    <a href="/support" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Support</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">System Status</h1>
+            <p class="text-xl text-gray-600">Current operational status of Kale Email API services</p>
+            <div class="mt-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                    All Systems Operational
+                </span>
+            </div>
+        </div>
+
+        <!-- Overall Status -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Service Overview</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-600 mb-2">99.9%</div>
+                    <div class="text-gray-600">Uptime (30 days)</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-600 mb-2">47ms</div>
+                    <div class="text-gray-600">Avg Response Time</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-indigo-600 mb-2">99.8%</div>
+                    <div class="text-gray-600">Email Delivery Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Status -->
+        <div class="grid md:grid-cols-2 gap-8 mb-8">
+            <!-- Core Services -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Core Services</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">API Gateway</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">Email Service</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">Authentication</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">Dashboard</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Infrastructure -->
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Infrastructure</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">Database</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">Redis Cache</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">File Storage</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-400 rounded-full mr-3"></span>
+                            <span class="font-medium">CDN</span>
+                        </div>
+                        <span class="text-green-600 font-medium">Operational</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Incidents -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Recent Incidents</h2>
+            <div class="space-y-4">
+                <div class="border-l-4 border-green-400 pl-4 py-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">All services restored</h3>
+                        <span class="text-sm text-gray-500">January 15, 2025</span>
+                    </div>
+                    <p class="text-gray-600 mt-1">Brief maintenance window completed successfully. All services operating normally.</p>
+                    <span class="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded mt-2">Resolved</span>
+                </div>
+                <div class="border-l-4 border-yellow-400 pl-4 py-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Scheduled maintenance</h3>
+                        <span class="text-sm text-gray-500">January 15, 2025</span>
+                    </div>
+                    <p class="text-gray-600 mt-1">Scheduled maintenance for database optimization. Expected downtime: 15 minutes.</p>
+                    <span class="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded mt-2">Completed</span>
+                </div>
+                <div class="border-l-4 border-green-400 pl-4 py-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Email delivery optimized</h3>
+                        <span class="text-sm text-gray-500">January 10, 2025</span>
+                    </div>
+                    <p class="text-gray-600 mt-1">Improved email delivery speed by 25% through infrastructure upgrades.</p>
+                    <span class="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded mt-2">Enhancement</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Performance Metrics (Last 24 Hours)</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-600 mb-2">2.4M</div>
+                    <div class="text-gray-600">API Requests</div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-green-600 mb-2">847K</div>
+                    <div class="text-gray-600">Emails Sent</div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-indigo-600 mb-2">99.97%</div>
+                    <div class="text-gray-600">Success Rate</div>
+                </div>
+                <div class="text-center p-4 bg-gray-50 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600 mb-2">42ms</div>
+                    <div class="text-gray-600">Avg Response</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Legend -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Status Legend</h3>
+            <div class="grid md:grid-cols-4 gap-4 text-sm">
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
+                    <span>Operational</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-yellow-400 rounded-full mr-2"></span>
+                    <span>Degraded</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-orange-400 rounded-full mr-2"></span>
+                    <span>Partial Outage</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-3 h-3 bg-red-400 rounded-full mr-2"></span>
+                    <span>Major Outage</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Subscribe to Updates -->
+        <div class="mt-8 bg-indigo-600 text-white rounded-lg p-8 text-center">
+            <h3 class="text-xl font-bold mb-4">Stay Updated</h3>
+            <p class="mb-6">Subscribe to receive notifications about service status changes and maintenance windows.</p>
+            <button class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                Subscribe to Updates
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-400">© 2025 Kanopus. All rights reserved.</p>
+            <p class="text-gray-500 text-sm mt-2">Page auto-refreshes every 30 seconds</p>
+        </div>
+    </footer>
+</body>
+</html>

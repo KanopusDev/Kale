@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kale - Enterprise Email API Platform</title>
+    <meta name="description" content="Enterprise Email API Platform for developers and businesses">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Kale">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-indigo-600">Kale</h1>
+                    </div>
+                    <div class="hidden md:ml-6 md:flex md:space-x-8">
+                        <a href="#features" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Features</a>
+                        <a href="#api-demo" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">API Demo</a>
+                        <a href="/docs" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Documentation</a>
+                        <a href="https://github.com/Kanopusdev/kale" target="_blank" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">GitHub</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/login" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Login</a>
+                    <a href="/register" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium">Get Started</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white pt-24 pb-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                    Enterprise Email API
+                    <span class="block text-yellow-300">Made Simple</span>
+                </h1>
+                <p class="text-xl md:text-2xl mb-8 text-gray-200 max-w-3xl mx-auto">
+                    Send emails at scale with your own SMTP. Template management, rate limiting, and enterprise security built-in.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="/register" class="bg-white text-indigo-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition duration-300 text-center">
+                        Get Started Free
+                    </a>
+                    <button onclick="showAPIDemo()" class="border-2 border-white text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-white hover:text-indigo-600 transition duration-300">
+                        View API Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Choose Kale?</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Enterprise-grade email infrastructure with developer-first approach</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Lightning Fast</h3>
+                    <p class="text-gray-600">Send thousands of emails per minute with our optimized SMTP connection pooling</p>
+                </div>
+
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Your SMTP</h3>
+                    <p class="text-gray-600">Use your own SMTP servers for complete control and better deliverability</p>
+                </div>
+
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Template Engine</h3>
+                    <p class="text-gray-600">Create reusable templates with variables and dynamic content</p>
+                </div>
+
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Enterprise Security</h3>
+                    <p class="text-gray-600">JWT authentication, API keys, rate limiting, and encryption</p>
+                </div>
+
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Analytics</h3>
+                    <p class="text-gray-600">Real-time monitoring, delivery tracking, and detailed reporting</p>
+                </div>
+
+                <div class="card-hover bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">Personal URLs</h3>
+                    <p class="text-gray-600">yourapi.com/username/template - clean, branded endpoints</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Demo Section -->
+    <section id="api-demo" class="py-16 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Simple API Integration</h2>
+                <p class="text-xl text-gray-600">Start sending emails in minutes with our RESTful API</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Send Email Example</h3>
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">POST</span>
+                </div>
+                <div class="bg-gray-900 rounded-lg p-4 text-white text-sm overflow-x-auto">
+                    <pre><code>curl -X POST "https://api.yourcompany.com/yourname/welcome-email" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipients": ["user@example.com"],
+    "variables": {
+      "name": "John Doe",
+      "company": "Acme Corp"
+    }
+  }'</code></pre>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Response</h3>
+                    <div class="bg-gray-900 rounded-lg p-4 text-white text-sm">
+                        <pre><code>{
+  "success": true,
+  "message": "Emails sent successfully",
+  "data": {
+    "request_id": "req_123456",
+    "sent_count": 1,
+    "failed_count": 0
+  }
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Rate Limits</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Unverified Users:</span>
+                            <span class="font-semibold">1,000/day</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Verified Users:</span>
+                            <span class="font-semibold">Unlimited</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">API Calls:</span>
+                            <span class="font-semibold">60/minute</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Auth Modals -->
+    <div id="auth-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-md w-full p-8">
+                <div id="login-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Login to Kale</h2>
+                    <form onsubmit="handleLogin(event)">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="login-email">
+                                Email
+                            </label>
+                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
+                                   id="login-email" type="email" required>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="login-password">
+                                Password
+                            </label>
+                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
+                                   id="login-password" type="password" required>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg w-full" 
+                                    type="submit">
+                                Login
+                            </button>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button type="button" onclick="showRegister()" class="text-indigo-600 hover:text-indigo-800">
+                                Don't have an account? Register
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="register-form" class="hidden">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Create Account</h2>
+                    <form onsubmit="handleRegister(event)">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="register-username">
+                                Username
+                            </label>
+                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
+                                   id="register-username" type="text" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="register-email">
+                                Email
+                            </label>
+                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
+                                   id="register-email" type="email" required>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="register-password">
+                                Password
+                            </label>
+                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
+                                   id="register-password" type="password" required>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg w-full" 
+                                    type="submit">
+                                Create Account
+                            </button>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button type="button" onclick="showLogin()" class="text-indigo-600 hover:text-indigo-800">
+                                Already have an account? Login
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <button onclick="hideAuth()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Kale</h3>
+                    <p class="text-gray-400">Enterprise Email API Platform</p>
+                    <p class="text-gray-400 mt-2">Built by <a href="https://kanopus.org" target="_blank" class="text-indigo-400 hover:text-indigo-300">Kanopus Development</a></p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Product</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#features" class="hover:text-white">Features</a></li>
+                        <li><a href="#api-demo" class="hover:text-white">API Demo</a></li>
+                        <li><a href="/docs" class="hover:text-white">Documentation</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Resources</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="https://github.com/Kanopusdev/kale" target="_blank" class="hover:text-white">GitHub</a></li>
+                        <li><a href="/docs" class="hover:text-white">API Reference</a></li>
+                        <li><a href="https://github.com/Kanopusdev/kale/issues" target="_blank" class="hover:text-white">Report Issues</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Open Source</h4>
+                    <p class="text-gray-400 text-sm">© 2025 Kanopus Development</p>
+                    <p class="text-gray-400 text-sm mt-1">Licensed under MIT</p>
+                    <p class="text-gray-400 text-sm mt-2">Made with ❤️ for developers</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <script>
+        // Auth functions
+        function showLogin() {
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('auth-overlay').classList.remove('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+            document.getElementById('login-form').classList.add('hidden');
+        }
+
+        function hideAuth() {
+            document.getElementById('auth-overlay').classList.add('hidden');
+        }
+
+        function showAPIDemo() {
+            document.getElementById('api-demo').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(data.detail || 'Login failed');
+                }
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const response = await fetch('/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Registration successful! Please login.');
+                    showLogin();
+                } else {
+                    alert(data.detail || 'Registration failed');
+                }
+            } catch (error) {
+                alert('Registration failed: ' + error.message);
+            }
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideAuth();
+            }
+        });
+
+        // Close modal on overlay click
+        document.getElementById('auth-overlay').addEventListener('click', function(event) {
+            if (event.target === this) {
+                hideAuth();
+            }
+        });
+    </script>
+</body>
+</html>

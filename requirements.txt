@@ -1,0 +1,60 @@
+# Core FastAPI and Server
+fastapi
+uvicorn[standard]
+gunicorn
+
+# Database and Caching
+redis
+sqlite3-to-mysql
+
+# Authentication and Security
+pydantic
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt
+cryptography
+
+# Email
+aiosmtplib
+email-validator
+
+# File Handling and Templates
+python-multipart
+jinja2
+aiofiles
+
+# Environment and Configuration
+python-dotenv
+
+# HTTP Client and Utilities
+httpx
+requests
+
+# Background Tasks and Queue
+celery
+kombu
+
+# Monitoring and Logging
+structlog
+sentry-sdk[fastapi]
+prometheus-client
+
+# Rate Limiting
+slowapi
+limits
+
+# Security Headers
+secure
+
+# Development and Testing
+pytest
+pytest-asyncio
+pytest-cov
+black
+flake8
+mypy
+
+# Documentation
+mkdocs
+mkdocs-material

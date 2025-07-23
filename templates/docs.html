@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Kale Email API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+
+    <style>
+        .code-block {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+        .nav-link.active {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-indigo-600">Kale</a>
+                    <div class="hidden md:ml-6 md:flex md:space-x-8">
+                        <a href="/dashboard" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
+                        <a href="/docs" class="text-indigo-600 border-b-2 border-indigo-600 px-3 py-2 text-sm font-medium">Documentation</a>
+                        <a href="/support" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Support</a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-info" class="text-gray-700 text-sm"></span>
+                    <button onclick="logout()" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Sidebar Navigation -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-lg p-6 sticky top-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Documentation</h3>
+                    <nav class="space-y-2">
+                        <a href="#getting-started" onclick="showSection('getting-started')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100 active">
+                            Getting Started
+                        </a>
+                        <a href="#authentication" onclick="showSection('authentication')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            Authentication
+                        </a>
+                        <a href="#sending-emails" onclick="showSection('sending-emails')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            Sending Emails
+                        </a>
+                        <a href="#templates" onclick="showSection('templates')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            Templates
+                        </a>
+                        <a href="#rate-limits" onclick="showSection('rate-limits')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            Rate Limits
+                        </a>
+                        <a href="#error-handling" onclick="showSection('error-handling')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            Error Handling
+                        </a>
+                        <a href="#sdks" onclick="showSection('sdks')" 
+                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                            SDKs & Libraries
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <!-- Getting Started -->
+                <section id="getting-started" class="doc-section">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Getting Started</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            Welcome to the Kale Email API! This guide will help you start sending emails through our platform in minutes.
+                        </p>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Quick Start</h2>
+                        
+                        <ol class="list-decimal list-inside space-y-4 mb-6">
+                            <li class="text-gray-700">
+                                <strong>Create an account</strong> - Sign up for a free account to get started
+                            </li>
+                            <li class="text-gray-700">
+                                <strong>Configure SMTP</strong> - Add your email server settings in the dashboard
+                            </li>
+                            <li class="text-gray-700">
+                                <strong>Create a template</strong> - Design your first email template
+                            </li>
+                            <li class="text-gray-700">
+                                <strong>Generate API key</strong> - Create an API key for authentication
+                            </li>
+                            <li class="text-gray-700">
+                                <strong>Send your first email</strong> - Use our API to send emails
+                            </li>
+                        </ol>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Your Personal API Endpoint</h3>
+                        <p class="text-gray-600 mb-4">
+                            Each user gets a personalized endpoint:
+                        </p>
+                        <div class="code-block mb-6">
+                            <code>https://kale.kanopus.org/{username}/{template_id}</code>
+                        </div>
+
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        <strong>Pro Tip:</strong> Your username becomes part of your API URL, making it easy to remember and share with your team.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Authentication -->
+                <section id="authentication" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Authentication</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            Kale uses API keys for authentication. Include your API key in the request headers or as a query parameter.
+                        </p>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">API Key Methods</h2>
+                        
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">1. Authorization Header (Recommended)</h3>
+                        <div class="code-block mb-6">
+<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome" \
+  -H "Authorization: Bearer your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"recipients": ["user@example.com"]}'</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">2. X-API-Key Header</h3>
+                        <div class="code-block mb-6">
+<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome" \
+  -H "X-API-Key: your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"recipients": ["user@example.com"]}'</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">3. Query Parameter</h3>
+                        <div class="code-block mb-6">
+<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome?api_key=your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"recipients": ["user@example.com"]}'</code></pre>
+                        </div>
+
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p class="text-sm text-yellow-700">
+                                        <strong>Security Note:</strong> Always use HTTPS and keep your API keys secure. Never expose them in client-side code.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Sending Emails -->
+                <section id="sending-emails" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Sending Emails</h1>
+                        
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Basic Email Sending</h2>
+                        
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Endpoint</h3>
+                        <div class="code-block mb-4">
+                            <code>POST https://kale.kanopus.org/{username}/{template_id}</code>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Request Body</h3>
+                        <div class="code-block mb-6">
+<pre><code>{
+  "recipients": ["user@example.com", "another@example.com"],
+  "variables": {
+    "name": "John Doe",
+    "company": "Acme Corp",
+    "custom_field": "Any value"
+  }
+}</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Complete Example</h3>
+                        <div class="code-block mb-6">
+<pre><code>curl -X POST "https://kale.kanopus.org/johndoe/welcome-email" \
+  -H "Authorization: Bearer kale_abc123def456..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipients": [
+      "newuser@example.com",
+      "admin@company.com"
+    ],
+    "variables": {
+      "username": "newuser",
+      "company_name": "Example Corp",
+      "activation_link": "https://app.example.com/activate/xyz"
+    }
+  }'</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
+                        <div class="code-block mb-6">
+<pre><code>{
+  "success": true,
+  "message": "Emails sent successfully",
+  "data": {
+    "request_id": "req_abc123def456",
+    "sent_count": 2,
+    "failed_count": 0,
+    "results": [
+      {
+        "recipient": "newuser@example.com",
+        "status": "sent",
+        "message_id": "msg_123456"
+      },
+      {
+        "recipient": "admin@company.com", 
+        "status": "sent",
+        "message_id": "msg_789012"
+      }
+    ]
+  }
+}</code></pre>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Field Descriptions</h2>
+                        
+                        <div class="overflow-x-auto mb-6">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Field</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">recipients</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">array</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Array of email addresses (max 100)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">variables</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">object</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Template variables for personalization</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Templates -->
+                <section id="templates" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Email Templates</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            Templates allow you to create reusable email designs with dynamic content using variables.
+                        </p>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Template Variables</h2>
+                        <p class="text-gray-600 mb-4">
+                            Use double curly braces to insert variables in your templates:
+                        </p>
+                        
+                        <div class="code-block mb-6">
+<pre><code>&lt;h1&gt;Welcome {{name}}!&lt;/h1&gt;
+&lt;p&gt;Thank you for joining {{company_name}}.&lt;/p&gt;
+&lt;p&gt;Your account was created on {{signup_date}}.&lt;/p&gt;</code></pre>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Get Template Information</h2>
+                        <div class="code-block mb-6">
+<pre><code>GET https://kale.kanopus.org/{username}/{template_id}
+Authorization: Bearer your-api-key</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
+                        <div class="code-block mb-6">
+<pre><code>{
+  "success": true,
+  "data": {
+    "template_id": "welcome-email",
+    "name": "Welcome Email",
+    "description": "Welcome new users to the platform",
+    "category": "transactional",
+    "variables": ["name", "company_name", "activation_link"],
+    "subject": "Welcome to {{company_name}}!",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}</code></pre>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">List User Templates</h2>
+                        <div class="code-block mb-6">
+<pre><code>GET https://kale.kanopus.org/{username}
+Authorization: Bearer your-api-key</code></pre>
+                        </div>
+
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
+                        <div class="code-block mb-6">
+<pre><code>{
+  "success": true,
+  "data": {
+    "username": "johndoe",
+    "total_templates": 3,
+    "templates": [
+      {
+        "template_id": "welcome-email",
+        "name": "Welcome Email",
+        "description": "Welcome new users",
+        "category": "transactional",
+        "variables": ["name", "company"],
+        "endpoint": "/johndoe/welcome-email"
+      }
+    ]
+  }
+}</code></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Rate Limits -->
+                <section id="rate-limits" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Rate Limits</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            To ensure fair usage and system stability, we implement rate limits on our API.
+                        </p>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Email Limits</h2>
+                        
+                        <div class="overflow-x-auto mb-6">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Daily Limit</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Burst Limit</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Unverified</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">1,000 emails/day</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">100 emails/5 minutes</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Verified</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Unlimited</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">100 emails/5 minutes</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Enterprise</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Unlimited</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Custom</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">API Call Limits</h2>
+                        
+                        <ul class="list-disc list-inside space-y-2 mb-6 text-gray-600">
+                            <li>60 requests per minute</li>
+                            <li>3,600 requests per hour</li>
+                            <li>50,000 requests per day</li>
+                        </ul>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Rate Limit Headers</h2>
+                        <p class="text-gray-600 mb-4">
+                            All API responses include rate limit information in the headers:
+                        </p>
+                        
+                        <div class="code-block mb-6">
+<pre><code>X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1640995200
+X-Email-Limit-Daily: 1000
+X-Email-Limit-Remaining: 750</code></pre>
+                        </div>
+
+                        <div class="bg-red-50 border-l-4 border-red-400 p-4">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p class="text-sm text-red-700">
+                                        <strong>Rate Limit Exceeded:</strong> When limits are exceeded, you'll receive a 429 status code. Implement exponential backoff in your applications.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Error Handling -->
+                <section id="error-handling" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Error Handling</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            The Kale API uses conventional HTTP status codes and provides detailed error messages.
+                        </p>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">HTTP Status Codes</h2>
+                        
+                        <div class="overflow-x-auto mb-6">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-green-600">200</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">OK</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Request successful</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">400</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Bad Request</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Invalid request data</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">401</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Unauthorized</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Invalid or missing API key</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">403</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Forbidden</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Account suspended or insufficient permissions</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">404</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Not Found</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Template or user not found</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">429</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Too Many Requests</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Rate limit exceeded</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 text-sm font-medium text-red-600">500</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Server Error</td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">Internal server error</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Error Response Format</h2>
+                        <div class="code-block mb-6">
+<pre><code>{
+  "success": false,
+  "error": {
+    "code": "INVALID_RECIPIENTS",
+    "message": "One or more recipient email addresses are invalid",
+    "details": {
+      "invalid_emails": ["invalid-email", "another@invalid"]
+    }
+  },
+  "request_id": "req_abc123def456"
+}</code></pre>
+                        </div>
+
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Common Error Codes</h2>
+                        
+                        <div class="space-y-4">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900">INVALID_API_KEY</h4>
+                                <p class="text-gray-600">The provided API key is invalid or has been revoked.</p>
+                            </div>
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900">TEMPLATE_NOT_FOUND</h4>
+                                <p class="text-gray-600">The specified template does not exist or is not accessible.</p>
+                            </div>
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900">RATE_LIMIT_EXCEEDED</h4>
+                                <p class="text-gray-600">You have exceeded your rate limit. Wait before making more requests.</p>
+                            </div>
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h4 class="font-semibold text-gray-900">SMTP_CONFIG_MISSING</h4>
+                                <p class="text-gray-600">No SMTP configuration found. Please configure your email server.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SDKs -->
+                <section id="sdks" class="doc-section hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-6">SDKs & Libraries</h1>
+                        
+                        <p class="text-lg text-gray-600 mb-6">
+                            Official and community SDKs to integrate Kale into your applications.
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                            <div class="border border-gray-200 rounded-lg p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-3">JavaScript/Node.js</h3>
+                                <div class="code-block mb-4">
+<pre><code>npm install kale-email-api</code></pre>
+                                </div>
+                                <div class="code-block">
+<pre><code>const Kale = require('kale-email-api');
+
+const kale = new Kale({
+  apiKey: 'your-api-key',
+  username: 'yourname'
+});
+
+await kale.send('welcome-email', {
+  recipients: ['user@example.com'],
+  variables: { name: 'John' }
+});</code></pre>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-3">Python</h3>
+                                <div class="code-block mb-4">
+<pre><code>pip install kale-email-api</code></pre>
+                                </div>
+                                <div class="code-block">
+<pre><code>from kale import KaleAPI
+
+kale = KaleAPI(
+    api_key='your-api-key',
+    username='yourname'
+)
+
+response = kale.send(
+    template_id='welcome-email',
+    recipients=['user@example.com'],
+    variables={'name': 'John'}
+)</code></pre>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-3">PHP</h3>
+                                <div class="code-block mb-4">
+<pre><code>composer require kale/email-api</code></pre>
+                                </div>
+                                <div class="code-block">
+<pre><code>use Kale\EmailAPI;
+
+$kale = new EmailAPI([
+    'api_key' => 'your-api-key',
+    'username' => 'yourname'
+]);
+
+$response = $kale->send('welcome-email', [
+    'recipients' => ['user@example.com'],
+    'variables' => ['name' => 'John']
+]);</code></pre>
+                                </div>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg p-6">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-3">cURL</h3>
+                                <p class="text-gray-600 mb-4">Use with any language that supports HTTP requests:</p>
+                                <div class="code-block">
+<pre><code>curl -X POST \
+  "https://kale.kanopus.org/yourname/welcome" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{"recipients":["user@example.com"]}'</code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="flex">
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        <strong>Coming Soon:</strong> We're working on SDKs for Go, Ruby, Java, and .NET. 
+                                        <a href="/support" class="underline">Contact us</a> if you need a specific language.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.doc-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+        }
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            if (token && user.username) {
+                document.getElementById('user-info').textContent = `${user.username}`;
+            } else {
+                document.getElementById('user-info').textContent = 'Not logged in';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+    </script>
+</body>
+</html>
