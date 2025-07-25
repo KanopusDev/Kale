@@ -66,3 +66,7 @@ htmlcov/
 
 # Documentation
 docs/_build/
+
+*.db-wal
+
+*.db-shm

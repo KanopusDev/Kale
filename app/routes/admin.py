@@ -1,11 +1,6 @@
 """
-Admin from app.models.schemas import User, AdminStats, EmailLog
-from app.services.user import user_service as user
-
-from app.core.database import db_manager
-from app.core.security import security
-from app.routes.auth import get_current_useroard Routes
-Enterprise-grade admin functionality for monitoring and management
+Admin Dashboard Routes
+Professional admin functionality for monitoring and management
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
@@ -40,7 +35,7 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
 async def admin_dashboard(request: Request, admin: User = Depends(require_admin)):
     """Admin dashboard page"""
     return templates.TemplateResponse(
-        "admin_dashboard.html", 
+        "admin.html", 
         {"request": request, "user": admin}
     )
 
@@ -229,6 +224,98 @@ async def update_user_admin(
         logger.error(f"Error updating user: {e}")
         raise HTTPException(status_code=500, detail="Failed to update user")
 
+@router.post("/users/{user_id}/verify")
+async def verify_user(
+    user_id: int,
+    admin: User = Depends(require_admin)
+):
+    """Verify a user account"""
+    try:
+        logger.info(f"Admin {admin.username} (ID: {admin.id}) attempting to verify user {user_id}")
+        
+        with db_manager.connection_pool.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Validate user exists
+            cursor.execute("SELECT id, username, is_verified FROM users WHERE id = ?", (user_id,))
+            user_data = cursor.fetchone()
+            if not user_data:
+                logger.warning(f"Admin {admin.username} tried to verify non-existent user {user_id}")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user_data['is_verified']:
+                logger.info(f"User {user_id} ({user_data['username']}) is already verified")
+                return {"message": "User is already verified"}
+            
+            # Verify user
+            cursor.execute(
+                "UPDATE users SET is_verified = 1, verified_at = ?, updated_at = ? WHERE id = ?", 
+                (datetime.utcnow(), datetime.utcnow(), user_id)
+            )
+            conn.commit()
+            
+            logger.info(f"User {user_id} ({user_data['username']}) verified successfully by admin {admin.username}")
+            
+            # Log admin action
+            await log_admin_action(admin.id, "user_verify", {
+                "target_user_id": user_id,
+                "target_username": user_data['username']
+            })
+            
+            return {"message": "User verified successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify user")
+
+@router.post("/users/{user_id}/suspend")
+async def suspend_user(
+    user_id: int,
+    admin: User = Depends(require_admin)
+):
+    """Suspend a user account"""
+    try:
+        logger.info(f"Admin {admin.username} (ID: {admin.id}) attempting to suspend user {user_id}")
+        
+        with db_manager.connection_pool.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Validate user exists and is not admin
+            cursor.execute("SELECT id, username, is_admin FROM users WHERE id = ?", (user_id,))
+            user_data = cursor.fetchone()
+            if not user_data:
+                logger.warning(f"Admin {admin.username} tried to suspend non-existent user {user_id}")
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            if user_data['is_admin']:
+                logger.warning(f"Admin {admin.username} tried to suspend another admin user {user_id} ({user_data['username']})")
+                raise HTTPException(status_code=400, detail="Cannot suspend admin users")
+            
+            # Suspend user
+            cursor.execute(
+                "UPDATE users SET is_active = 0, suspended_at = ?, updated_at = ? WHERE id = ?", 
+                (datetime.utcnow(), datetime.utcnow(), user_id)
+            )
+            conn.commit()
+            
+            logger.info(f"User {user_id} ({user_data['username']}) suspended successfully by admin {admin.username}")
+            
+            # Log admin action
+            await log_admin_action(admin.id, "user_suspend", {
+                "target_user_id": user_id,
+                "target_username": user_data['username']
+            })
+            
+            return {"message": "User suspended successfully"}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error suspending user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to suspend user")
+
 @router.get("/email-logs")
 async def get_email_logs(
     admin: User = Depends(require_admin),
@@ -240,6 +327,8 @@ async def get_email_logs(
 ) -> Dict[str, Any]:
     """Get email logs with filtering"""
     try:
+        logger.info(f"Admin {admin.username} requesting email logs: page={page}, limit={limit}, user_id={user_id}, status={status}, days={days}")
+        
         with db_manager.connection_pool.get_connection() as conn:
             cursor = conn.cursor()
             
@@ -259,12 +348,16 @@ async def get_email_logs(
             
             # Get total count
             cursor.execute(f"SELECT COUNT(*) as count FROM email_logs WHERE {where_clause}", params)
-            total = cursor.fetchone()['count']
+            total = cursor.fetchone()[0]
             
-            # Get paginated results
+            logger.info(f"Found {total} email logs matching criteria")
+            
+            # Get paginated results with better error handling
             offset = (page - 1) * limit
             cursor.execute(f"""
-                SELECT el.*, u.username, u.email as user_email
+                SELECT el.id, el.user_id, el.template_id, el.recipient_email, 
+                       el.subject, el.status, el.error_message, el.sent_at, 
+                       el.message_id, u.username, u.email as user_email
                 FROM email_logs el
                 JOIN users u ON el.user_id = u.id
                 WHERE {where_clause}
@@ -274,19 +367,23 @@ async def get_email_logs(
             
             logs = []
             for row in cursor.fetchall():
-                logs.append({
-                    "id": row['id'],
-                    "user_id": row['user_id'],
-                    "username": row['username'],
-                    "user_email": row['user_email'],
-                    "template_id": row['template_id'],
-                    "recipient_email": row['recipient_email'],
-                    "subject": row['subject'],
-                    "status": row['status'],
-                    "error_message": row['error_message'],
-                    "sent_at": row['sent_at'],
-                    "message_id": row.get('message_id')
-                })
+                # Convert SQLite Row to dict safely
+                log_entry = {
+                    "id": row[0] if len(row) > 0 else None,
+                    "user_id": row[1] if len(row) > 1 else None,
+                    "template_id": row[2] if len(row) > 2 else None,
+                    "recipient_email": row[3] if len(row) > 3 else None,
+                    "subject": row[4] if len(row) > 4 else None,
+                    "status": row[5] if len(row) > 5 else None,
+                    "error_message": row[6] if len(row) > 6 else None,
+                    "sent_at": row[7] if len(row) > 7 else None,
+                    "message_id": row[8] if len(row) > 8 else None,
+                    "username": row[9] if len(row) > 9 else None,
+                    "user_email": row[10] if len(row) > 10 else None
+                }
+                logs.append(log_entry)
+            
+            logger.info(f"Successfully retrieved {len(logs)} email logs for admin {admin.username}")
             
             return {
                 "logs": logs,

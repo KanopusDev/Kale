@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 class Settings(BaseSettings):
-    """Enterprise-grade configuration management"""
+    """Professional configuration management"""
     
     # ===== APPLICATION SETTINGS =====
     APP_NAME: str = "Kale Email API Platform"

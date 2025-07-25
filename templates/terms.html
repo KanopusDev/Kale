@@ -3,30 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms of Service - Kale Email API</title>
+    <title>Terms of Service - Kale Email API Platform</title>
+    <meta name="description" content="Terms of service for Kale Email API Platform. Understand your rights and responsibilities when using our service.">
+    
+    <!-- Tailwind CSS with Custom Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#4f46e5',
+                            600: '#4338ca',
+                            700: '#3730a3',
+                            800: '#312e81',
+                            900: '#1e1b4b'
+                        },
+                        'secondary': {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            200: '#a5f3fc',
+                            300: '#67e8f9',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            800: '#155e75',
+                            900: '#164e63'
+                        },
+                        'accent': {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .prose h2 {
+            color: #1f2937;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .prose h3 {
+            color: #374151;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .prose p {
+            margin-bottom: 1rem;
+            line-height: 1.7;
+        }
+        
+        .prose ul {
+            margin-bottom: 1.5rem;
+        }
+        
+        .prose li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
+    <nav class="bg-white shadow-lg border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Kale</a>
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+                        Kale
+                    </a>
+                    <div class="hidden md:ml-8 md:flex md:space-x-1">
+                        <a href="/" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Home</a>
+                        <a href="/dashboard" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Dashboard</a>
+                        <a href="/docs" target="_blank" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Docs</a>
+                        <a href="/support" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Support</a>
+                    </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Home</a>
-                    <a href="/dashboard" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
+                    <a href="/login" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Login</a>
+                    <a href="/register" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-2 text-sm font-medium rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all">Get Started</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="bg-white rounded-lg shadow-lg p-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-8">Terms of Service</h1>
-            
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Terms of Service</h1>
+            <p class="text-xl text-gray-600">Last updated: January 2025</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-8 card-hover">
             <div class="prose prose-gray max-w-none">
                 <p class="text-gray-600 mb-6">
                     <strong>Last updated:</strong> January 2025
@@ -40,7 +159,7 @@
 
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">2. Service Description</h2>
                 <p class="text-gray-600 mb-4">
-                    Kale is an enterprise-grade email API service that provides:
+                    Kale is a professional email API service that provides:
                 </p>
                 <ul class="list-disc pl-6 text-gray-600 mb-6">
                     <li>SMTP integration and email sending capabilities</li>
@@ -111,7 +230,7 @@
 
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">7. Data and Privacy</h2>
                 <p class="text-gray-600 mb-6">
-                    Your data privacy is governed by our Privacy Policy. We implement enterprise-grade security 
+                    Your data privacy is governed by our Privacy Policy. We implement professional security 
                     measures and comply with applicable data protection regulations.
                 </p>
 
@@ -150,34 +269,61 @@
                     arising from your use of the service or violation of these terms.
                 </p>
 
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">12. Governing Law</h2>
-                <p class="text-gray-600 mb-6">
-                    These terms shall be governed by and construed in accordance with applicable laws, 
-                    without regard to conflict of law provisions.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">13. Changes to Terms</h2>
-                <p class="text-gray-600 mb-6">
-                    We reserve the right to modify these terms at any time. We will provide notice of material 
-                    changes and your continued use constitutes acceptance of the modified terms.
-                </p>
-
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">14. Contact Information</h2>
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">12. Contact Information</h2>
                 <p class="text-gray-600 mb-4">
-                    Questions about these terms should be directed to:
+                    For questions about these terms, contact us at:
                 </p>
-                <ul class="list-disc pl-6 text-gray-600">
-                    <li>Email: legal@kanopus.org</li>
-                    <li>Support: <a href="/support" class="text-indigo-600 hover:text-indigo-800">Contact Support</a></li>
-                </ul>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <p class="text-gray-700 font-medium">Kanopus Development</p>
+                    <p class="text-gray-600">Email: support@kanopus.org</p>
+                    <p class="text-gray-600">Website: <a href="https://kanopus.org" class="text-primary-600 hover:text-primary-700">kanopus.org</a></p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12 mt-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p class="text-gray-400">© 2025 Kanopus. All rights reserved.</p>
+    <footer class="bg-gray-900 text-white py-20 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">Kale</h3>
+                    <p class="text-gray-400 mb-4">Professional Email API Platform</p>
+                    <p class="text-gray-400">Built by <a href="https://kanopus.org" target="_blank" class="text-accent-400 hover:text-accent-300 transition-colors">Kanopus Development</a></p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Product</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/" class="hover:text-primary-400 transition-colors">Home</a></li>
+                        <li><a href="/docs" target="_blank" class="hover:text-primary-400 transition-colors">Documentation</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Resources</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="https://github.com/Kanopusdev/kale" target="_blank" class="hover:text-primary-400 transition-colors">GitHub</a></li>
+                        <li><a href="/support" class="hover:text-primary-400 transition-colors">Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Legal</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/privacy" class="hover:text-primary-400 transition-colors">Privacy Policy</a></li>
+                        <li><a href="/terms" class="hover:text-primary-400 transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="text-gray-400 text-sm mb-4 md:mb-0">
+                        © 2025 Kanopus Development. Licensed under MIT.
+                    </div>
+                    <div class="text-gray-400 text-sm">
+                        Made with <span class="text-red-400">❤️</span> for developers worldwide
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 </body>

@@ -54,6 +54,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         logger.info(f"Authentication successful for user: {user_obj.username}")
         return user_obj
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Authentication error: {e}")
         raise credentials_exception

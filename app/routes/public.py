@@ -1,7 +1,7 @@
 """
 Public API Routes
 Handles the main public email API endpoints: /{username}/{template_id}
-Enterprise-grade implementation with comprehensive security and monitoring
+Professional implementation with comprehensive security and monitoring
 """
 
 from fastapi import APIRouter, Request, HTTPException, status, Depends, BackgroundTasks

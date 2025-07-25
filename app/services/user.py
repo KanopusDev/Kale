@@ -42,15 +42,22 @@ class UserService:
                 # Fetch created user
                 user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
                 
+                # Ensure row is accessed as dictionary
+                if isinstance(user_row, sqlite3.Row):
+                    user_dict = dict(user_row)
+                else:
+                    user_dict = user_row
+                
                 return User(
-                    id=user_row['id'],
-                    username=user_row['username'],
-                    email=user_row['email'],
-                    is_verified=bool(user_row['is_verified']),
-                    is_admin=bool(user_row['is_admin']),
-                    api_key=user_row['api_key'],
-                    created_at=user_row['created_at'],
-                    updated_at=user_row['updated_at']
+                    id=user_dict['id'],
+                    username=user_dict['username'],
+                    email=user_dict['email'],
+                    is_verified=bool(user_dict.get('is_verified', False)),
+                    is_admin=bool(user_dict.get('is_admin', False)),
+                    is_active=bool(user_dict.get('is_active', True)),
+                    api_key=user_dict['api_key'],
+                    created_at=user_dict['created_at'],
+                    updated_at=user_dict['updated_at']
                 )
             
         except Exception as e:
@@ -62,23 +69,30 @@ class UserService:
         """Authenticate user with email and password"""
         try:
             with db_manager.get_db_connection() as conn:
-                user_row = conn.execute("SELECT * FROM users WHERE email = ?", (user_data.email,)).fetchone()
+                user_row = conn.execute("SELECT * FROM users WHERE email = ? AND is_active = 1", (user_data.email,)).fetchone()
                 
                 if not user_row:
                     return None
                 
-                if not security.verify_password(user_data.password, user_row['hashed_password']):
+                # Ensure row is accessed as dictionary
+                if isinstance(user_row, sqlite3.Row):
+                    user_dict = dict(user_row)
+                else:
+                    user_dict = user_row
+                
+                if not security.verify_password(user_data.password, user_dict['hashed_password']):
                     return None
                 
                 return User(
-                    id=user_row['id'],
-                    username=user_row['username'],
-                    email=user_row['email'],
-                    is_verified=bool(user_row['is_verified']),
-                    is_admin=bool(user_row['is_admin']),
-                    api_key=user_row['api_key'],
-                    created_at=user_row['created_at'],
-                    updated_at=user_row['updated_at']
+                    id=user_dict['id'],
+                    username=user_dict['username'],
+                    email=user_dict['email'],
+                    is_verified=bool(user_dict.get('is_verified', False)),
+                    is_admin=bool(user_dict.get('is_admin', False)),
+                    is_active=bool(user_dict.get('is_active', True)),
+                    api_key=user_dict['api_key'],
+                    created_at=user_dict['created_at'],
+                    updated_at=user_dict['updated_at']
                 )
             
         except Exception as e:
@@ -92,21 +106,28 @@ class UserService:
             with db_manager.get_db_connection() as conn:
                 cursor = conn.cursor()
                 
-                cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+                cursor.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (user_id,))
                 user_row = cursor.fetchone()
                 
                 if not user_row:
                     return None
                 
+                # Ensure row is accessed as dictionary
+                if isinstance(user_row, sqlite3.Row):
+                    user_dict = dict(user_row)
+                else:
+                    user_dict = user_row
+                
                 return User(
-                    id=user_row['id'],
-                    username=user_row['username'],
-                    email=user_row['email'],
-                    is_verified=bool(user_row['is_verified']),
-                    is_admin=bool(user_row['is_admin']),
-                    api_key=user_row['api_key'],
-                    created_at=user_row['created_at'],
-                    updated_at=user_row['updated_at']
+                    id=user_dict['id'],
+                    username=user_dict['username'],
+                    email=user_dict['email'],
+                    is_verified=bool(user_dict.get('is_verified', False)),
+                    is_admin=bool(user_dict.get('is_admin', False)),
+                    is_active=bool(user_dict.get('is_active', True)),
+                    api_key=user_dict['api_key'],
+                    created_at=user_dict['created_at'],
+                    updated_at=user_dict['updated_at']
                 )
                 
         except Exception as e:
@@ -120,21 +141,28 @@ class UserService:
             with db_manager.get_db_connection() as conn:
                 cursor = conn.cursor()
                 
-                cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+                cursor.execute("SELECT * FROM users WHERE username = ? AND is_active = 1", (username,))
                 user_row = cursor.fetchone()
                 
                 if not user_row:
                     return None
                 
+                # Ensure row is accessed as dictionary
+                if isinstance(user_row, sqlite3.Row):
+                    user_dict = dict(user_row)
+                else:
+                    user_dict = user_row
+                
                 return User(
-                    id=user_row['id'],
-                    username=user_row['username'],
-                    email=user_row['email'],
-                    is_verified=bool(user_row['is_verified']),
-                    is_admin=bool(user_row['is_admin']),
-                    api_key=user_row['api_key'],
-                    created_at=user_row['created_at'],
-                    updated_at=user_row['updated_at']
+                    id=user_dict['id'],
+                    username=user_dict['username'],
+                    email=user_dict['email'],
+                    is_verified=bool(user_dict.get('is_verified', False)),
+                    is_admin=bool(user_dict.get('is_admin', False)),
+                    is_active=bool(user_dict.get('is_active', True)),
+                    api_key=user_dict['api_key'],
+                    created_at=user_dict['created_at'],
+                    updated_at=user_dict['updated_at']
                 )
                 
         except Exception as e:
@@ -154,15 +182,22 @@ class UserService:
                 if not user_row:
                     return None
                 
+                # Ensure row is accessed as dictionary
+                if isinstance(user_row, sqlite3.Row):
+                    user_dict = dict(user_row)
+                else:
+                    user_dict = user_row
+                
                 return User(
-                    id=user_row['id'],
-                    username=user_row['username'],
-                    email=user_row['email'],
-                    is_verified=bool(user_row['is_verified']),
-                    is_admin=bool(user_row['is_admin']),
-                    api_key=user_row['api_key'],
-                    created_at=user_row['created_at'],
-                    updated_at=user_row['updated_at']
+                    id=user_dict['id'],
+                    username=user_dict['username'],
+                    email=user_dict['email'],
+                    is_verified=bool(user_dict.get('is_verified', False)),
+                    is_admin=bool(user_dict.get('is_admin', False)),
+                    is_active=bool(user_dict.get('is_active', True)),
+                    api_key=user_dict['api_key'],
+                    created_at=user_dict['created_at'],
+                    updated_at=user_dict['updated_at']
                 )
                 
         except Exception as e:
@@ -251,14 +286,15 @@ class UserService:
                 
                 return [
                     User(
-                        id=row['id'],
-                        username=row['username'],
-                        email=row['email'],
-                        is_verified=bool(row['is_verified']),
-                        is_admin=bool(row['is_admin']),
-                        api_key=row['api_key'],
-                        created_at=row['created_at'],
-                        updated_at=row['updated_at']
+                        id=dict(row)['id'] if isinstance(row, sqlite3.Row) else row['id'],
+                        username=dict(row)['username'] if isinstance(row, sqlite3.Row) else row['username'],
+                        email=dict(row)['email'] if isinstance(row, sqlite3.Row) else row['email'],
+                        is_verified=bool(dict(row).get('is_verified', False) if isinstance(row, sqlite3.Row) else row.get('is_verified', False)),
+                        is_admin=bool(dict(row).get('is_admin', False) if isinstance(row, sqlite3.Row) else row.get('is_admin', False)),
+                        is_active=bool(dict(row).get('is_active', True) if isinstance(row, sqlite3.Row) else row.get('is_active', True)),
+                        api_key=dict(row)['api_key'] if isinstance(row, sqlite3.Row) else row['api_key'],
+                        created_at=dict(row)['created_at'] if isinstance(row, sqlite3.Row) else row['created_at'],
+                        updated_at=dict(row)['updated_at'] if isinstance(row, sqlite3.Row) else row['updated_at']
                     )
                     for row in user_rows
                 ]

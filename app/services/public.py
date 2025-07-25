@@ -1,7 +1,7 @@
 """
 Public API Service
 Handles public email API endpoints for /{username}/{template_id}
-Enterprise-grade implementation with comprehensive security and monitoring
+Professional implementation with comprehensive security and monitoring
 """
 
 import asyncio
@@ -228,37 +228,36 @@ class PublicAPIService:
             # Hash the API key for secure comparison
             hashed_key = hashlib.sha256(api_key.encode()).hexdigest()
             
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT u.*, ak.key_hash, ak.is_active as key_active, ak.expires_at
-                FROM users u
-                JOIN api_keys ak ON u.id = ak.user_id
-                WHERE u.username = ? AND ak.key_hash = ? AND ak.is_active = 1
-            """, (username, hashed_key))
-            
-            row = cursor.fetchone()
-            conn.close()
-            
-            if not row:
-                return None
-            
-            # Check if key is expired
-            if row['expires_at'] and datetime.fromisoformat(row['expires_at']) < datetime.utcnow():
-                return None
-            
-            return User(
-                id=row['id'],
-                username=row['username'],
-                email=row['email'],
-                is_verified=bool(row['is_verified']),
-                is_admin=bool(row['is_admin']),
-                is_active=bool(row['is_active']),
-                api_key=api_key,  # Return the original key
-                created_at=row['created_at'],
-                updated_at=row['updated_at']
-            )
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT u.*, ak.api_key_hash, ak.is_active as key_active, ak.expires_at
+                    FROM users u
+                    JOIN user_api_keys ak ON u.id = ak.user_id
+                    WHERE u.username = ? AND ak.api_key_hash = ? AND ak.is_active = 1
+                """, (username, hashed_key))
+                
+                row = cursor.fetchone()
+                
+                if not row:
+                    return None
+                
+                # Check if key is expired
+                if row['expires_at'] and datetime.fromisoformat(row['expires_at']) < datetime.utcnow():
+                    return None
+                
+                return User(
+                    id=row['id'],
+                    username=row['username'],
+                    email=row['email'],
+                    is_verified=bool(row['is_verified']),
+                    is_admin=bool(row['is_admin']),
+                    is_active=bool(row['is_active']),
+                    api_key=api_key,  # Return the original key
+                    created_at=row['created_at'],
+                    updated_at=row['updated_at']
+                )
             
         except Exception as e:
             logger.error(f"API key validation error: {e}")
@@ -267,41 +266,48 @@ class PublicAPIService:
     async def _check_rate_limits(self, user: User, client_ip: str) -> Tuple[bool, str]:
         """Check various rate limits for the user"""
         try:
-            # Get user's daily limit
-            daily_limit = -1 if user.is_verified else settings.UNVERIFIED_DAILY_LIMIT
+            from app.services.limitter import RateLimitType, RateLimitWindow
             
-            # Check daily email limit
-            if daily_limit > 0:
-                daily_count = await self._get_daily_email_count(user.id)
-                if daily_count >= daily_limit:
-                    return False, f"Daily email limit ({daily_limit}) exceeded"
+            # Check email rate limits based on verification status
+            email_result = await self.rate_limit.check_email_rate_limit(
+                user.id, user.is_verified, email_count=1
+            )
             
-            # Check API rate limits
-            api_key = f"api_rate:{user.id}"
-            if not await self.rate_limit.check_rate_limit(
-                api_key, settings.API_RATE_LIMIT_PER_MINUTE, 60
-            ):
-                return False, "API rate limit exceeded (per minute)"
+            if not email_result.allowed:
+                return False, f"Email rate limit exceeded: {email_result.retry_after}s remaining"
             
-            if not await self.rate_limit.check_rate_limit(
-                api_key, settings.API_RATE_LIMIT_PER_HOUR, 3600
-            ):
-                return False, "API rate limit exceeded (per hour)"
+            # Check API rate limits - per minute
+            api_result_minute = await self.rate_limit.check_rate_limit(
+                RateLimitType.API_CALLS,
+                str(user.id),
+                RateLimitWindow.MINUTE,
+                custom_limit=settings.API_RATE_LIMIT_PER_MINUTE
+            )
+            
+            if not api_result_minute.allowed:
+                return False, f"API rate limit exceeded (per minute): {api_result_minute.retry_after}s remaining"
+            
+            # Check API rate limits - per hour
+            api_result_hour = await self.rate_limit.check_rate_limit(
+                RateLimitType.API_CALLS,
+                str(user.id),
+                RateLimitWindow.HOUR,
+                custom_limit=settings.API_RATE_LIMIT_PER_HOUR
+            )
+            
+            if not api_result_hour.allowed:
+                return False, f"API rate limit exceeded (per hour): {api_result_hour.retry_after}s remaining"
             
             # Check IP-based rate limits
-            ip_key = f"ip_rate:{client_ip}"
-            if not await self.rate_limit.check_rate_limit(
-                ip_key, 100, 60  # 100 requests per minute per IP
-            ):
-                return False, "IP rate limit exceeded"
+            ip_result = await self.rate_limit.check_rate_limit(
+                RateLimitType.API_CALLS,
+                f"ip:{client_ip}",
+                RateLimitWindow.MINUTE,
+                custom_limit=100  # 100 requests per minute per IP
+            )
             
-            # Check burst limits
-            burst_key = f"burst:{user.id}"
-            if not await self.rate_limit.check_rate_limit(
-                burst_key, settings.EMAIL_BURST_LIMIT, 
-                settings.EMAIL_BURST_WINDOW_MINUTES * 60
-            ):
-                return False, "Burst limit exceeded"
+            if not ip_result.allowed:
+                return False, f"IP rate limit exceeded: {ip_result.retry_after}s remaining"
             
             return True, "Rate limits OK"
             
@@ -360,27 +366,25 @@ class PublicAPIService:
     async def _get_user_template(self, user_id: int, template_id: str) -> Optional[EmailTemplate]:
         """Get user's template or public template"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            # First try user's private templates
-            cursor.execute("""
-                SELECT * FROM email_templates 
-                WHERE user_id = ? AND template_id = ? AND is_active = 1
-            """, (user_id, template_id))
-            
-            row = cursor.fetchone()
-            
-            # If not found, try public/system templates
-            if not row:
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # First try user's private templates
                 cursor.execute("""
                     SELECT * FROM email_templates 
-                    WHERE (is_public = 1 OR is_system_template = 1) 
-                    AND template_id = ? AND is_active = 1
-                """, (template_id,))
+                    WHERE user_id = ? AND template_id = ?
+                """, (user_id, template_id))
+                
                 row = cursor.fetchone()
-            
-            conn.close()
+                
+                # If not found, try public/system templates
+                if not row:
+                    cursor.execute("""
+                        SELECT * FROM email_templates 
+                        WHERE (is_public = 1 OR is_system_template = 1) 
+                        AND template_id = ?
+                    """, (template_id,))
+                    row = cursor.fetchone()
             
             if row:
                 return EmailTemplate(
@@ -396,7 +400,6 @@ class PublicAPIService:
                     description=row['description'],
                     is_public=bool(row['is_public']),
                     is_system_template=bool(row['is_system_template']),
-                    is_active=bool(row['is_active']),
                     created_at=row['created_at'],
                     updated_at=row['updated_at']
                 )
@@ -410,17 +413,16 @@ class PublicAPIService:
     async def _get_user_smtp_config(self, user_id: int) -> Optional[SMTPConfig]:
         """Get user's active SMTP configuration"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT * FROM smtp_configs 
-                WHERE user_id = ? AND is_active = 1 
-                ORDER BY created_at DESC LIMIT 1
-            """, (user_id,))
-            
-            row = cursor.fetchone()
-            conn.close()
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT * FROM smtp_configs 
+                    WHERE user_id = ? AND is_active = 1 
+                    ORDER BY created_at DESC LIMIT 1
+                """, (user_id,))
+                
+                row = cursor.fetchone()
             
             if row:
                 return SMTPConfig(
@@ -448,18 +450,16 @@ class PublicAPIService:
         try:
             today = datetime.utcnow().date()
             
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT COUNT(*) as count FROM email_logs 
-                WHERE user_id = ? AND DATE(sent_at) = ? AND status = 'sent'
-            """, (user_id, today.isoformat()))
-            
-            result = cursor.fetchone()
-            conn.close()
-            
-            return result['count'] if result else 0
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM email_logs 
+                    WHERE user_id = ? AND DATE(sent_at) = ? AND status = 'sent'
+                """, (user_id, today.isoformat()))
+                
+                result = cursor.fetchone()
+                return result['count'] if result else 0
             
         except Exception as e:
             logger.error(f"Daily email count error: {e}")
@@ -478,28 +478,27 @@ class PublicAPIService:
     ):
         """Log API usage for monitoring and analytics"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            # Get user ID
-            cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-            user_row = cursor.fetchone()
-            user_id = user_row['id'] if user_row else None
-            
-            # Log the API call
-            cursor.execute("""
-                INSERT INTO api_usage_logs 
-                (user_id, username, template_id, endpoint, client_ip, user_agent,
-                 request_data, status_code, response_message, request_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                user_id, username, template_id, f"/{username}/{template_id}",
-                client_ip, user_agent, json.dumps(request_data), status_code,
-                response_message, request_id, datetime.utcnow()
-            ))
-            
-            conn.commit()
-            conn.close()
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get user ID
+                cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+                user_row = cursor.fetchone()
+                user_id = user_row['id'] if user_row else None
+                
+                # Log the API call
+                cursor.execute("""
+                    INSERT INTO api_usage_logs 
+                    (user_id, username, template_id, endpoint, method, client_ip, user_agent,
+                     request_data, status_code, response_message, request_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id, username, template_id, f"/{username}/{template_id}",
+                    "POST", client_ip, user_agent, json.dumps(request_data), status_code,
+                    response_message, request_id, datetime.utcnow()
+                ))
+                
+                conn.commit()
             
         except Exception as e:
             logger.error(f"API usage logging error: {e}")
@@ -507,24 +506,23 @@ class PublicAPIService:
     async def _update_user_stats(self, user_id: int, sent_count: int, failed_count: int):
         """Update user statistics"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            # Update user stats
-            cursor.execute("""
-                UPDATE users SET 
-                    total_emails_sent = total_emails_sent + ?,
-                    emails_sent_today = emails_sent_today + ?,
-                    last_api_call = ?,
-                    updated_at = ?
-                WHERE id = ?
-            """, (
-                sent_count, sent_count, datetime.utcnow(), 
-                datetime.utcnow(), user_id
-            ))
-            
-            conn.commit()
-            conn.close()
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Update user stats
+                cursor.execute("""
+                    UPDATE users SET 
+                        total_emails_sent = total_emails_sent + ?,
+                        emails_sent_today = emails_sent_today + ?,
+                        last_api_call = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                """, (
+                    sent_count, sent_count, datetime.utcnow(), 
+                    datetime.utcnow(), user_id
+                ))
+                
+                conn.commit()
             
         except Exception as e:
             logger.error(f"User stats update error: {e}")
@@ -534,38 +532,36 @@ class PublicAPIService:
         try:
             since_date = datetime.utcnow() - timedelta(days=days)
             
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            # Get detailed stats
-            cursor.execute("""
-                SELECT 
-                    COUNT(*) as total_calls,
-                    COUNT(CASE WHEN status_code = 200 THEN 1 END) as successful_calls,
-                    COUNT(CASE WHEN status_code >= 400 THEN 1 END) as failed_calls,
-                    COUNT(DISTINCT DATE(created_at)) as active_days,
-                    AVG(CASE WHEN status_code = 200 THEN 1.0 ELSE 0.0 END) as success_rate
-                FROM api_usage_logs 
-                WHERE user_id = ? AND created_at >= ?
-            """, (user_id, since_date))
-            
-            stats_row = cursor.fetchone()
-            
-            # Get usage by day
-            cursor.execute("""
-                SELECT 
-                    DATE(created_at) as date,
-                    COUNT(*) as calls,
-                    COUNT(CASE WHEN status_code = 200 THEN 1 END) as successful
-                FROM api_usage_logs 
-                WHERE user_id = ? AND created_at >= ?
-                GROUP BY DATE(created_at)
-                ORDER BY date DESC
-            """, (user_id, since_date))
-            
-            daily_usage = cursor.fetchall()
-            
-            conn.close()
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get detailed stats
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total_calls,
+                        COUNT(CASE WHEN status_code = 200 THEN 1 END) as successful_calls,
+                        COUNT(CASE WHEN status_code >= 400 THEN 1 END) as failed_calls,
+                        COUNT(DISTINCT DATE(created_at)) as active_days,
+                        AVG(CASE WHEN status_code = 200 THEN 1.0 ELSE 0.0 END) as success_rate
+                    FROM api_usage_logs 
+                    WHERE user_id = ? AND created_at >= ?
+                """, (user_id, since_date))
+                
+                stats_row = cursor.fetchone()
+                
+                # Get usage by day
+                cursor.execute("""
+                    SELECT 
+                        DATE(created_at) as date,
+                        COUNT(*) as calls,
+                        COUNT(CASE WHEN status_code = 200 THEN 1 END) as successful
+                    FROM api_usage_logs 
+                    WHERE user_id = ? AND created_at >= ?
+                    GROUP BY DATE(created_at)
+                    ORDER BY date DESC
+                """, (user_id, since_date))
+                
+                daily_usage = cursor.fetchall()
             
             return {
                 "total_calls": stats_row['total_calls'] or 0,

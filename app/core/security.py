@@ -25,7 +25,7 @@ pwd_context = CryptContext(
 )
 
 class SecurityManager:
-    """Enterprise-grade security manager"""
+    """Professional security manager"""
     
     def __init__(self):
         # Initialize encryption key for sensitive data
@@ -54,7 +54,7 @@ class SecurityManager:
     
     @staticmethod
     def get_password_hash(password: str) -> str:
-        """Hash a password with enterprise-grade security"""
+        """Hash a password with Professional security"""
         try:
             return pwd_context.hash(password)
         except Exception as e:
@@ -183,7 +183,7 @@ class SecurityManager:
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")
             return None
-        except jwt.InvalidTokenError as e:
+        except JWTError as e:
             logger.warning(f"Invalid token: {e}")
             return None
         except Exception as e:

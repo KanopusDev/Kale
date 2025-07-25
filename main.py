@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
-    """Enterprise-grade security middleware"""
+    """Professional security middleware"""
     
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -220,7 +220,7 @@ except ImportError as e:
 # Include admin routes
 try:
     from app.routes.admin import router as admin_router
-    app.include_router(admin_router, prefix="/api/admin", tags=["Admin"])
+    app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
     logger.info("Admin router included successfully")
 except ImportError as e:
     logger.warning(f"Admin router not available: {e}")

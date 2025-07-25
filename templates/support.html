@@ -3,205 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Support - Kale Email API</title>
+    <title>Support Center - Kale Email API Platform</title>
+    <meta name="description" content="Get help with your Kale Email API integration">
+    
+    <!-- Tailwind CSS with Custom Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#4f46e5',
+                            600: '#4338ca',
+                            700: '#3730a3',
+                            800: '#312e81',
+                            900: '#1e1b4b'
+                        },
+                        'secondary': {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            200: '#a5f3fc',
+                            300: '#67e8f9',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            800: '#155e75',
+                            900: '#164e63'
+                        },
+                        'accent': {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-focus {
+            transition: all 0.3s ease;
+        }
+        
+        .input-focus:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .contact-card {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border: 1px solid rgba(79, 70, 229, 0.1);
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+
+<body class="bg-gray-50 min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
+    <nav class="bg-white shadow-lg border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Kale</a>
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+                        Kale
+                    </a>
+                    <div class="hidden md:ml-8 md:flex md:space-x-1">
+                        <a href="/" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Home</a>
+                        <a href="/dashboard" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Dashboard</a>
+                        <a href="/docs" target="_blank" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Docs</a>
+                        <a href="/support" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-3 py-2 text-sm font-medium rounded-lg">Support</a>
+                    </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Home</a>
-                    <a href="/dashboard" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
-                    <a href="/docs" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Docs</a>
+                    <a href="/login" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Login</a>
+                    <a href="/register" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-2 text-sm font-medium rounded-lg hover:from-primary-600 hover:to-secondary-600 transition-all">Get Started</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Header -->
         <div class="text-center mb-12">
             <h1 class="text-4xl font-bold text-gray-900 mb-4">Support Center</h1>
             <p class="text-xl text-gray-600">Get help with your Kale Email API integration</p>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-8 mb-12">
-            <!-- Contact Form -->
-            <div class="bg-white rounded-lg shadow-lg p-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Contact Support</h2>
-                <form id="supportForm" class="space-y-6">
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                        <input type="text" id="name" name="name" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <input type="email" id="email" name="email" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    <div>
-                        <label for="subject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                        <select id="subject" name="subject" required 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select a topic...</option>
-                            <option value="technical">Technical Issue</option>
-                            <option value="billing">Billing Question</option>
-                            <option value="integration">Integration Help</option>
-                            <option value="feature">Feature Request</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="priority" class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
-                        <select id="priority" name="priority" required 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="message" class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                        <textarea id="message" name="message" rows="6" required 
-                                  placeholder="Please describe your issue or question in detail..."
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-                    </div>
-                    <button type="submit" 
-                            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors">
-                        Send Message
-                    </button>
-                </form>
-            </div>
-
-            <!-- Quick Help -->
-            <div class="space-y-6">
-                <!-- FAQ -->
-                <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
-                    <div class="space-y-4">
-                        <div class="border-b border-gray-200 pb-4">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I get started with the API?</h3>
-                            <p class="text-gray-600">
-                                First, create an account and configure your SMTP settings in the dashboard. 
-                                Then generate an API key and follow our <a href="/docs" class="text-indigo-600 hover:text-indigo-800">documentation</a> for integration examples.
-                            </p>
-                        </div>
-                        <div class="border-b border-gray-200 pb-4">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2">What are the rate limits?</h3>
-                            <p class="text-gray-600">
-                                Rate limits vary by plan. Free accounts can send up to 100 emails per day. 
-                                Paid plans have higher limits starting at 10,000 emails per month.
-                            </p>
-                        </div>
-                        <div class="border-b border-gray-200 pb-4">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Can I use my own SMTP server?</h3>
-                            <p class="text-gray-600">
-                                Yes! Kale works with any SMTP server including Gmail, SendGrid, Amazon SES, 
-                                and your own mail server. Just configure the settings in your dashboard.
-                            </p>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-900 mb-2">How do I track email delivery?</h3>
-                            <p class="text-gray-600">
-                                Email delivery status is tracked automatically. You can view delivery reports 
-                                in your dashboard or query the API for detailed delivery information.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contact Info -->
-                <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Other Ways to Reach Us</h2>
-                    <div class="space-y-4">
-                        <div class="flex items-start space-x-3">
-                            <div class="bg-indigo-100 p-2 rounded-lg">
-                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900">Email Support</h3>
-                                <p class="text-gray-600">support@kanopus.org</p>
-                                <p class="text-sm text-gray-500">Response within 24 hours</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start space-x-3">
-                            <div class="bg-indigo-100 p-2 rounded-lg">
-                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900">Documentation</h3>
-                                <p class="text-gray-600">Comprehensive API docs and guides</p>
-                                <a href="/docs" class="text-indigo-600 hover:text-indigo-800 text-sm">View Documentation →</a>
-                            </div>
-                        </div>
-                        <div class="flex items-start space-x-3">
-                            <div class="bg-indigo-100 p-2 rounded-lg">
-                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900">Status Page</h3>
-                                <p class="text-gray-600">Check service status and uptime</p>
-                                <a href="#" class="text-indigo-600 hover:text-indigo-800 text-sm">View Status →</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Success Message -->
-        <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            <span class="block sm:inline">Your message has been sent successfully! We'll get back to you soon.</span>
+        <div id="successMessage" class="hidden bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-8">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="font-medium">Your message has been sent successfully! We'll get back to you soon.</span>
+            </div>
         </div>
+
+        <!-- Contact Information -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <!-- Email Support -->
+            <div class="glass-card rounded-2xl p-8 card-hover">
+                <div class="text-center">
+                    <div class="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Email Support</h3>
+                    <p class="text-gray-600 mb-6">Reach out to us via email for support, questions, or feedback</p>
+                    <a href="mailto:support@kale.dev" 
+                       class="inline-flex items-center bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        support@kale.dev
+                    </a>
+                </div>
+            </div>
+
+            <!-- GitHub Issues -->
+            <div class="glass-card rounded-2xl p-8 card-hover">
+                <div class="text-center">
+                    <div class="bg-gray-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">GitHub Issues</h3>
+                    <p class="text-gray-600 mb-6">Report bugs, request features, or contribute to the project</p>
+                    <a href="https://github.com/Kanopusdev/Kale/issues" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                        </svg>
+                        Open an Issue
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- GitHub Repository -->
+        <div class="glass-card rounded-2xl p-8 mb-12 card-hover">
+            <div class="text-center">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Kale Email API Repository</h3>
+                <p class="text-gray-600 mb-6">
+                    Kale is an open-source email API platform. View the source code, contribute, or star the repository on GitHub.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="https://github.com/Kanopusdev/Kale" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-all">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                        </svg>
+                        View Repository
+                    </a>
+                    
+                    <a href="https://github.com/Kanopusdev/Kale/discussions" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        Join Discussions
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Frequently Asked Questions -->
+        <div class="glass-card rounded-2xl p-8 mb-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">How do I get started with the API?</h3>
+                        <p class="text-gray-600">
+                            First, create an account and configure your SMTP settings in the dashboard. 
+                            Then generate an API key and follow our <a href="/docs" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium">documentation</a> for integration examples.
+                        </p>
+                    </div>
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">What are the rate limits?</h3>
+                        <p class="text-gray-600">
+                            Rate limits vary by plan. Free accounts can send up to 100 emails per day. 
+                            Paid plans have higher limits starting at 10,000 emails per month.
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Can I use my own SMTP server?</h3>
+                        <p class="text-gray-600">
+                            Yes! Kale works with any SMTP server including Gmail, SendGrid, Amazon SES, 
+                            and your own mail server. Just configure the settings in your dashboard.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">How do I track email delivery?</h3>
+                        <p class="text-gray-600">
+                            Email delivery status is tracked automatically. You can view delivery reports 
+                            in your dashboard or query the API for detailed delivery information.
+                        </p>
+                    </div>
+                    <div class="border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">How do I report bugs or request features?</h3>
+                        <p class="text-gray-600">
+                            You can report bugs or request features on our 
+                            <a href="https://github.com/Kanopusdev/Kale/issues" class="text-primary-600 hover:text-primary-700 font-medium" target="_blank">GitHub Issues page</a>. 
+                            Please provide detailed information to help us assist you better.
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Is Kale open source?</h3>
+                        <p class="text-gray-600">
+                            Yes! Kale is completely open source. You can view the source code, contribute, 
+                            or fork the project on <a href="https://github.com/Kanopusdev/Kale" class="text-primary-600 hover:text-primary-700 font-medium" target="_blank">GitHub</a>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources Section -->
+        <div class="glass-card rounded-2xl p-8 mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Community & Resources</h2>
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="text-center">
+                    <div class="bg-primary-100 w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">API Documentation</h3>
+                    <p class="text-gray-600 mb-4">Complete guides and API references</p>
+                    <a href="/docs" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium">View Docs →</a>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-gray-900 w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Source Code</h3>
+                    <p class="text-gray-600 mb-4">View and contribute to Kale</p>
+                    <a href="https://github.com/Kanopusdev/Kale" target="_blank" class="text-gray-900 hover:text-gray-700 font-medium">View on GitHub →</a>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-accent-100 w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Discussions</h3>
+                    <p class="text-gray-600 mb-4">Join community discussions</p>
+                    <a href="https://github.com/Kanopusdev/Kale/discussions" target="_blank" class="text-accent-600 hover:text-accent-700 font-medium">Join Chat →</a>
+                </div>
+            </div>
+        </div
     </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12 mt-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <p class="text-gray-400">© 2025 Kanopus. All rights reserved.</p>
+    <footer class="bg-gray-900 text-white py-20 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">Kale</h3>
+                    <p class="text-gray-400 mb-4">Professional Email API Platform</p>
+                    <p class="text-gray-400">Built by <a href="https://kanopus.org" target="_blank" class="text-accent-400 hover:text-accent-300 transition-colors">Kanopus Development</a></p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Product</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/" class="hover:text-primary-400 transition-colors">Home</a></li>
+                        <li><a href="/docs" target="_blank" class="hover:text-primary-400 transition-colors">Documentation</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Resources</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="https://github.com/Kanopusdev/kale" target="_blank" class="hover:text-primary-400 transition-colors">GitHub</a></li>
+                        <li><a href="/support" class="hover:text-primary-400 transition-colors">Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Legal</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/privacy" class="hover:text-primary-400 transition-colors">Privacy Policy</a></li>
+                        <li><a href="/terms" class="hover:text-primary-400 transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="text-gray-400 text-sm mb-4 md:mb-0">
+                        © 2025 Kanopus Development. Licensed under MIT.
+                    </div>
+                    <div class="text-gray-400 text-sm">
+                        Made with <span class="text-red-400">❤️</span> for developers worldwide
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
 
-    <script>
-        document.getElementById('supportForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const data = Object.fromEntries(formData.entries());
-            
-            try {
-                const response = await fetch('/api/support/contact', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                if (response.ok) {
-                    document.getElementById('successMessage').classList.remove('hidden');
-                    this.reset();
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    throw new Error('Failed to send message');
-                }
-            } catch (error) {
-                alert('Failed to send message. Please try again or contact us directly at support@kanopus.org');
-            }
-        });
-    </script>
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/support.js"></script>
 </body>
 </html>

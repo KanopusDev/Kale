@@ -26,6 +26,7 @@ class User(UserBase):
     id: int
     is_verified: bool
     is_admin: bool
+    is_active: bool
     api_key: str
     created_at: datetime
     updated_at: datetime
@@ -42,7 +43,7 @@ class SMTPConfigBase(BaseModel):
     smtp_host: str
     smtp_port: int
     smtp_username: str
-    smtp_password: str
+    smtp_password: Optional[str] = None
     use_tls: bool = True
     from_email: EmailStr
     from_name: Optional[str] = None
@@ -73,11 +74,51 @@ class EmailTemplateCreate(EmailTemplateBase):
     
     @validator('template_id')
     def validate_template_id(cls, v):
-        if len(v) < 3 or len(v) > 100:
-            raise ValueError('Template ID must be between 3 and 100 characters')
-        if not v.replace('_', '').replace('-', '').isalnum():
-            raise ValueError('Template ID must contain only alphanumeric characters, hyphens, and underscores')
-        return v.lower()
+        if not v:
+            raise ValueError('Template ID is required')
+        
+        # Remove any invalid characters and convert to lowercase
+        clean_id = v.strip().lower()
+        
+        if len(clean_id) < 3:
+            raise ValueError('Template ID must be at least 3 characters long')
+        if len(clean_id) > 100:
+            raise ValueError('Template ID must be no more than 100 characters long')
+        
+        # Check for valid characters
+        import re
+        if not re.match(r'^[a-z0-9_-]+$', clean_id):
+            raise ValueError('Template ID can only contain lowercase letters, numbers, hyphens, and underscores')
+        
+        return clean_id
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Template name is required')
+        if len(v.strip()) < 3:
+            raise ValueError('Template name must be at least 3 characters long')
+        if len(v.strip()) > 200:
+            raise ValueError('Template name must be no more than 200 characters long')
+        return v.strip()
+    
+    @validator('subject')
+    def validate_subject(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Subject line is required')
+        if len(v.strip()) < 3:
+            raise ValueError('Subject line must be at least 3 characters long')
+        if len(v.strip()) > 500:
+            raise ValueError('Subject line must be no more than 500 characters long')
+        return v.strip()
+    
+    @validator('html_content')
+    def validate_html_content(cls, v):
+        if not v or not v.strip():
+            raise ValueError('HTML content is required')
+        if len(v.strip()) < 10:
+            raise ValueError('HTML content must be at least 10 characters long')
+        return v.strip()
 
 class EmailTemplate(EmailTemplateBase):
     id: int

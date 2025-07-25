@@ -3,612 +3,869 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation - Kale Email API</title>
+    <title>API Documentation - Kale Email API Platform</title>
+    <meta name="description" content="Complete API documentation for the Kale Email API Platform">
+    
+    <!-- Tailwind CSS with Custom Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/static/css/main.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a'
+                        },
+                        secondary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a'
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'monospace']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                        'bounce-light': 'bounceLight 2s infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        bounceLight: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
-
+    
     <style>
+        body { 
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+        
         .code-block {
-            background: #1f2937;
-            color: #f9fafb;
-            padding: 1rem;
-            border-radius: 0.5rem;
+            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            color: #f8fafc;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
             overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            position: relative;
         }
+        
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .code-header {
+            position: relative;
+            z-index: 1;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #94a3b8;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .nav-link {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
         .nav-link.active {
-            background-color: #e0e7ff;
-            color: #3730a3;
+            background: linear-gradient(135deg, #3b82f6 0%, #14b8a6 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
+        
+        .nav-link:hover:not(.active) {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            transform: translateX(4px);
+        }
+        
+        .sidebar-link {
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 2px 0;
+        }
+        
+        .sidebar-link:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            transform: translateX(4px);
+        }
+        
+        .sidebar-link.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #14b8a6 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .endpoint-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .method-post { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .method-get { 
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: white;
+        }
+        .method-put { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        .method-delete { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .copy-button:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .copy-button.copied {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            border-left: 4px solid #3b82f6;
+            border-radius: 0 12px 12px 0;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .response-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-200 { background: #10b981; }
+        .status-400 { background: #f59e0b; }
+        .status-401 { background: #ef4444; }
+        .status-500 { background: #6b7280; }
+        
+        .syntax-highlight .keyword { color: #8b5cf6; }
+        .syntax-highlight .string { color: #10b981; }
+        .syntax-highlight .number { color: #f59e0b; }
+        .syntax-highlight .comment { color: #6b7280; }
+        
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6 0%, #14b8a6 100%);
+            z-index: 9999;
+            transition: width 0.3s ease;
+        }
+        
+        .mobile-menu-overlay {
+            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .sidebar-sticky {
+            position: sticky;
+            top: 24px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+        }
+        
+        .sidebar-sticky::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .sidebar-sticky::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .sidebar-sticky::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.3);
+            border-radius: 2px;
+        }
+        
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Kale</a>
-                    <div class="hidden md:ml-6 md:flex md:space-x-8">
-                        <a href="/dashboard" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
-                        <a href="/docs" class="text-indigo-600 border-b-2 border-indigo-600 px-3 py-2 text-sm font-medium">Documentation</a>
-                        <a href="/support" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Support</a>
+
+<body class="min-h-screen">
+    <!-- Scroll Progress Indicator -->
+    <div id="scroll-progress" class="scroll-indicator" style="width: 0%"></div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3 space-y-8">
+                <!-- Introduction Section -->
+                <section id="introduction" class="docs-section">
+                    <div class="glass-card rounded-2xl p-8 card-hover">
+                        <div class="section-header p-6 mb-8">
+                            <h1 class="text-4xl font-bold text-gray-900 mb-4">Kale Email API</h1>
+                            <p class="text-xl text-gray-600">Professional email delivery platform with powerful templating and analytics</p>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-3 gap-6 mb-8">
+                            <div class="feature-card p-6 rounded-xl">
+                                <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Lightning Fast</h3>
+                                <p class="text-gray-600 text-sm">High-performance email delivery with enterprise-grade reliability and speed.</p>
+                            </div>
+                            
+                            <div class="feature-card p-6 rounded-xl">
+                                <div class="w-12 h-12 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Templates</h3>
+                                <p class="text-gray-600 text-sm">Dynamic templating system with variables, conditionals, and rich formatting options.</p>
+                            </div>
+                            
+                            <div class="feature-card p-6 rounded-xl">
+                                <div class="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Real-time Analytics</h3>
+                                <p class="text-gray-600 text-sm">Comprehensive tracking, delivery reports, and performance insights in real-time.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-primary-50 to-secondary-50 p-6 rounded-xl border border-primary-200">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Quick Start</h3>
+                            <p class="text-gray-600 mb-4">Get started with Kale Email API in minutes. Create an account, generate your API key, and start sending emails.</p>
+                            <div class="flex flex-wrap gap-3">
+                                <a href="#getting-started" class="inline-flex items-center bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:from-primary-600 hover:to-primary-700 transition-all">
+                                    Get Started
+                                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                    </svg>
+                                </a>
+                                <a href="#sending-emails" class="inline-flex items-center bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-all">
+                                    View Examples
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span id="user-info" class="text-gray-700 text-sm"></span>
-                    <button onclick="logout()" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Logout</button>
-                </div>
-            </div>
-        </div>
-    </nav>
+                </section>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <!-- Sidebar Navigation -->
             <div class="lg:col-span-1">
-                <div class="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Documentation</h3>
-                    <nav class="space-y-2">
-                        <a href="#getting-started" onclick="showSection('getting-started')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100 active">
+                <div class="glass-card rounded-2xl p-6 sticky top-24">
+                    <div class="flex items-center mb-6">
+                        <div class="p-2 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg mr-3">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Documentation</h3>
+                    </div>
+                    
+                    <nav class="space-y-1">
+                        <a href="#getting-started" class="sidebar-link active flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
                             Getting Started
                         </a>
-                        <a href="#authentication" onclick="showSection('authentication')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                        <a href="#authentication" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                            </svg>
                             Authentication
                         </a>
-                        <a href="#sending-emails" onclick="showSection('sending-emails')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                        <a href="#sending-emails" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
                             Sending Emails
                         </a>
-                        <a href="#templates" onclick="showSection('templates')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                        <a href="#templates" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
                             Templates
                         </a>
-                        <a href="#rate-limits" onclick="showSection('rate-limits')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                        <a href="#rate-limits" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
                             Rate Limits
                         </a>
-                        <a href="#error-handling" onclick="showSection('error-handling')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
+                        <a href="#webhooks" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                            Webhooks
+                        </a>
+                        <a href="#errors" class="sidebar-link flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-primary-50 hover:text-primary-700 transition-colors">
+                            <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.872-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
                             Error Handling
                         </a>
-                        <a href="#sdks" onclick="showSection('sdks')" 
-                           class="nav-link block px-3 py-2 rounded-md text-sm hover:bg-gray-100">
-                            SDKs & Libraries
-                        </a>
                     </nav>
+                    
+                    <!-- Quick Links -->
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Quick Links</h4>
+                        <div class="space-y-2">
+                            <a href="/dashboard" class="flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                </svg>
+                                Dashboard
+                            </a>
+                            <a href="/support" class="flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Support
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Main Content -->
             <div class="lg:col-span-3">
-                <!-- Getting Started -->
-                <section id="getting-started" class="doc-section">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Getting Started</h1>
-                        
-                        <p class="text-lg text-gray-600 mb-6">
-                            Welcome to the Kale Email API! This guide will help you start sending emails through our platform in minutes.
+                <!-- Getting Started Section -->
+                <section id="getting-started" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <div class="flex items-center mb-6">
+                            <div class="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-lg mr-4">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <h1 class="text-3xl font-bold text-gray-900">Getting Started</h1>
+                        </div>
+                        <p class="text-lg text-gray-600 mb-8">
+                            Welcome to the Kale Email API documentation. This guide will help you get started with sending emails through our professional API platform.
                         </p>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Quick Start</h2>
-                        
-                        <ol class="list-decimal list-inside space-y-4 mb-6">
-                            <li class="text-gray-700">
-                                <strong>Create an account</strong> - Sign up for a free account to get started
-                            </li>
-                            <li class="text-gray-700">
-                                <strong>Configure SMTP</strong> - Add your email server settings in the dashboard
-                            </li>
-                            <li class="text-gray-700">
-                                <strong>Create a template</strong> - Design your first email template
-                            </li>
-                            <li class="text-gray-700">
-                                <strong>Generate API key</strong> - Create an API key for authentication
-                            </li>
-                            <li class="text-gray-700">
-                                <strong>Send your first email</strong> - Use our API to send emails
-                            </li>
-                        </ol>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Your Personal API Endpoint</h3>
-                        <p class="text-gray-600 mb-4">
-                            Each user gets a personalized endpoint:
-                        </p>
-                        <div class="code-block mb-6">
-                            <code>https://kale.kanopus.org/{username}/{template_id}</code>
+                        <div class="mb-8">
+                            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Base URL</h2>
+                            <div class="code-block p-4">
+                                <code>https://kale.kanopus.org</code>
+                            </div>
                         </div>
 
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
-                            <div class="flex">
-                                <div class="ml-3">
-                                    <p class="text-sm text-blue-700">
-                                        <strong>Pro Tip:</strong> Your username becomes part of your API URL, making it easy to remember and share with your team.
-                                    </p>
-                                </div>
-                            </div>
+                        <div class="mb-8">
+                            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Quick Start</h2>
+                            <ol class="list-decimal list-inside space-y-2 text-gray-600">
+                                <li>Create your account and get your API key</li>
+                                <li>Configure your SMTP settings in the dashboard</li>
+                                <li>Create your first email template</li>
+                                <li>Send your first email via API</li>
+                            </ol>
                         </div>
                     </div>
                 </section>
 
-                <!-- Authentication -->
-                <section id="authentication" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Authentication</h1>
+                <!-- Authentication Section -->
+                <section id="authentication" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Authentication</h2>
                         
-                        <p class="text-lg text-gray-600 mb-6">
-                            Kale uses API keys for authentication. Include your API key in the request headers or as a query parameter.
-                        </p>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">API Key Methods</h2>
-                        
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">1. Authorization Header (Recommended)</h3>
-                        <div class="code-block mb-6">
-<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome" \
-  -H "Authorization: Bearer your-api-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{"recipients": ["user@example.com"]}'</code></pre>
-                        </div>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">2. X-API-Key Header</h3>
-                        <div class="code-block mb-6">
-<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome" \
-  -H "X-API-Key: your-api-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{"recipients": ["user@example.com"]}'</code></pre>
-                        </div>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">3. Query Parameter</h3>
-                        <div class="code-block mb-6">
-<pre><code>curl -X POST "https://kale.kanopus.org/yourname/welcome?api_key=your-api-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{"recipients": ["user@example.com"]}'</code></pre>
-                        </div>
-
-                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                            <div class="flex">
-                                <div class="ml-3">
-                                    <p class="text-sm text-yellow-700">
-                                        <strong>Security Note:</strong> Always use HTTPS and keep your API keys secure. Never expose them in client-side code.
-                                    </p>
-                                </div>
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">API Key Authentication</h3>
+                            <p class="text-gray-600 mb-4">
+                                Kale uses API keys for authentication. Include your API key in the Authorization header:
+                            </p>
+                            <div class="code-block p-4">
+                                <code>Authorization: Bearer your-api-key-here</code>
                             </div>
+                        </div>
+
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Getting Your API Key</h3>
+                            <p class="text-gray-600 mb-4">
+                                You can generate and manage your API keys in the <a href="/dashboard" class="text-primary-600 hover:text-primary-700 font-medium">Dashboard</a>.
+                            </p>
                         </div>
                     </div>
                 </section>
 
-                <!-- Sending Emails -->
-                <section id="sending-emails" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Sending Emails</h1>
+                <!-- Sending Emails Section -->
+                <section id="sending-emails" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Sending Emails</h2>
                         
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Basic Email Sending</h2>
-                        
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Endpoint</h3>
-                        <div class="code-block mb-4">
-                            <code>POST https://kale.kanopus.org/{username}/{template_id}</code>
-                        </div>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Request Body</h3>
-                        <div class="code-block mb-6">
-<pre><code>{
-  "recipients": ["user@example.com", "another@example.com"],
-  "variables": {
-    "name": "John Doe",
-    "company": "Acme Corp",
-    "custom_field": "Any value"
-  }
-}</code></pre>
-                        </div>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Complete Example</h3>
-                        <div class="code-block mb-6">
-<pre><code>curl -X POST "https://kale.kanopus.org/johndoe/welcome-email" \
-  -H "Authorization: Bearer kale_abc123def456..." \
+                        <div class="mb-8">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="endpoint-badge method-post">POST</span>
+                                <code class="text-lg font-mono">/api/v1/email/send</code>
+                            </div>
+                            <p class="text-gray-600 mb-6">Send an email using a template or raw HTML content.</p>
+                            
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Request Examples</h3>
+                            
+                            <!-- cURL Example -->
+                            <h4 class="text-md font-medium text-gray-800 mb-2">cURL</h4>
+                            <div class="code-block p-4 mb-4">
+                                <pre><code>curl -X POST "https://kale.kanopus.org/api/v1/email/send" \
+  -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
+    "template_id": "welcome-email",
     "recipients": [
-      "newuser@example.com",
-      "admin@company.com"
+      {
+        "email": "user@example.com",
+        "name": "John Doe"
+      }
     ],
     "variables": {
-      "username": "newuser",
-      "company_name": "Example Corp",
-      "activation_link": "https://app.example.com/activate/xyz"
+      "name": "John Doe",
+      "company": "Acme Corp",
+      "signup_date": "2025-01-15"
+    },
+    "subject": "Welcome to {{company}}!"
+  }'</code></pre>
+                            </div>
+
+                            <!-- PowerShell Example -->
+                            <h4 class="text-md font-medium text-gray-800 mb-2">PowerShell</h4>
+                            <div class="code-block p-4 mb-6">
+                                <pre><code>$headers = @{
+    "Authorization" = "Bearer your-api-key"
+    "Content-Type" = "application/json"
+}
+
+$body = @{
+    template_id = "welcome-email"
+    recipients = @(
+        @{
+            email = "user@example.com"
+            name = "John Doe"
+        }
+    )
+    variables = @{
+        name = "John Doe"
+        company = "Acme Corp"
+        signup_date = "2025-01-15"
+    }
+    subject = "Welcome to {{company}}!"
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "https://kale.kanopus.org/api/v1/email/send" `
+                  -Method POST `
+                  -Headers $headers `
+                  -Body $body</code></pre>
+                            </div>
+
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Response Example</h3>
+                            <div class="code-block p-4">
+                                <pre><code>{
+  "success": true,
+  "message": "Email sent successfully",
+  "data": {
+    "request_id": "req_abc123def456",
+    "sent_count": 1,
+    "failed_count": 0,
+    "delivery_time": "0.245s",
+    "email_ids": ["email_xyz789"]
+  }
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Public API Section -->
+                <section id="public-api" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Public API Endpoints</h2>
+                        <p class="text-gray-600 mb-8">Simplified endpoints for direct email sending using your username and template ID.</p>
+                        
+                        <div class="mb-8">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="endpoint-badge method-post">POST</span>
+                                <code class="text-lg font-mono">/{username}/{template_id}</code>
+                            </div>
+                            <p class="text-gray-600 mb-6">Send emails directly using your username and template ID in the URL path.</p>
+                            
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Request Examples</h3>
+                            
+                            <!-- cURL Example -->
+                            <h4 class="text-md font-medium text-gray-800 mb-2">cURL</h4>
+                            <div class="code-block p-4 mb-4">
+                                <pre><code>curl -X POST "https://kale.kanopus.org/{username}/welcome" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipients": ["user@example.com", "another@example.com"],
+    "variables": {
+      "name": "John Doe",
+      "company": "Acme Corp"
     }
   }'</code></pre>
-                        </div>
+                            </div>
 
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
-                        <div class="code-block mb-6">
-<pre><code>{
+                            <!-- PowerShell Example -->
+                            <h4 class="text-md font-medium text-gray-800 mb-2">PowerShell</h4>
+                            <div class="code-block p-4 mb-6">
+                                <pre><code>$headers = @{
+    "Authorization" = "Bearer your-api-key"
+    "Content-Type" = "application/json"
+}
+
+$body = @{
+    recipients = @("user@example.com", "another@example.com")
+    variables = @{
+        name = "John Doe"
+        company = "Acme Corp"
+    }
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "https://kale.kanopus.org/{username}/welcome-email" `
+                  -Method POST `
+                  -Headers $headers `
+                  -Body $body</code></pre>
+                            </div>
+
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Request Body Schema</h3>
+                            <div class="code-block p-4 mb-6">
+                                <pre><code>{
+  "recipients": ["email1@example.com", "email2@example.com"],
+  "variables": {
+    "variable_name": "value",
+    "another_variable": "another_value"
+  }
+}</code></pre>
+                            </div>
+
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Response Example</h3>
+                            <div class="code-block p-4">
+                                <pre><code>{
   "success": true,
   "message": "Emails sent successfully",
   "data": {
     "request_id": "req_abc123def456",
     "sent_count": 2,
     "failed_count": 0,
-    "results": [
-      {
-        "recipient": "newuser@example.com",
-        "status": "sent",
-        "message_id": "msg_123456"
-      },
-      {
-        "recipient": "admin@company.com", 
-        "status": "sent",
-        "message_id": "msg_789012"
-      }
-    ]
+    "delivery_time": "0.189s",
+    "template_used": "welcome-email",
+    "username": "pradyumntandon"
   }
 }</code></pre>
-                        </div>
+                            </div>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Field Descriptions</h2>
-                        
-                        <div class="overflow-x-auto mb-6">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Field</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">recipients</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">array</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Array of email addresses (max 100)</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">variables</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">object</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Template variables for personalization</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <div>
+                                        <h4 class="text-blue-800 font-medium mb-1">API Key Authentication</h4>
+                                        <p class="text-blue-700 text-sm">The API key can be provided in three ways:</p>
+                                        <ul class="text-blue-700 text-sm mt-2 space-y-1">
+                                            <li>• <code class="bg-blue-100 px-1 rounded">Authorization: Bearer your-api-key</code> header</li>
+                                            <li>• <code class="bg-blue-100 px-1 rounded">X-API-Key: your-api-key</code> header</li>
+                                            <li>• <code class="bg-blue-100 px-1 rounded">?api_key=your-api-key</code> query parameter</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Templates -->
-                <section id="templates" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Email Templates</h1>
+                <!-- Templates Section -->
+                <section id="templates" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Email Templates</h2>
                         
-                        <p class="text-lg text-gray-600 mb-6">
-                            Templates allow you to create reusable email designs with dynamic content using variables.
-                        </p>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Template Variables</h2>
-                        <p class="text-gray-600 mb-4">
-                            Use double curly braces to insert variables in your templates:
-                        </p>
-                        
-                        <div class="code-block mb-6">
-<pre><code>&lt;h1&gt;Welcome {{name}}!&lt;/h1&gt;
-&lt;p&gt;Thank you for joining {{company_name}}.&lt;/p&gt;
-&lt;p&gt;Your account was created on {{signup_date}}.&lt;/p&gt;</code></pre>
-                        </div>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Get Template Information</h2>
-                        <div class="code-block mb-6">
-<pre><code>GET https://kale.kanopus.org/{username}/{template_id}
-Authorization: Bearer your-api-key</code></pre>
-                        </div>
-
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
-                        <div class="code-block mb-6">
-<pre><code>{
-  "success": true,
-  "data": {
-    "template_id": "welcome-email",
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Create Template</h3>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="endpoint-badge method-post">POST</span>
+                                <code class="text-lg font-mono">/api/v1/templates</code>
+                            </div>
+                            
+                            <div class="code-block p-4 mb-6">
+                                <pre><code>curl -X POST "https://kale.kanopus.org/api/v1/templates" \
+  -H "Authorization: Bearer your-api-key" \
+  -H "Content-Type: application/json" \
+  -d '{
     "name": "Welcome Email",
-    "description": "Welcome new users to the platform",
-    "category": "transactional",
-    "variables": ["name", "company_name", "activation_link"],
+    "slug": "welcome-email",
     "subject": "Welcome to {{company_name}}!",
-    "created_at": "2024-01-15T10:30:00Z",
-    "updated_at": "2024-01-15T10:30:00Z"
-  }
-}</code></pre>
+    "html_content": "&lt;h1&gt;Welcome {{name}}!&lt;/h1&gt;&lt;p&gt;Thank you for joining {{company_name}}.&lt;/p&gt;",
+    "variables": ["name", "company_name"]
+  }'</code></pre>
+                            </div>
                         </div>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">List User Templates</h2>
-                        <div class="code-block mb-6">
-<pre><code>GET https://kale.kanopus.org/{username}
-Authorization: Bearer your-api-key</code></pre>
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Get Template</h3>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="endpoint-badge method-get">GET</span>
+                                <code class="text-lg font-mono">/api/v1/templates/{template_id}</code>
+                            </div>
                         </div>
 
-                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Response</h3>
-                        <div class="code-block mb-6">
-<pre><code>{
-  "success": true,
-  "data": {
-    "username": "johndoe",
-    "total_templates": 3,
-    "templates": [
-      {
-        "template_id": "welcome-email",
-        "name": "Welcome Email",
-        "description": "Welcome new users",
-        "category": "transactional",
-        "variables": ["name", "company"],
-        "endpoint": "/johndoe/welcome-email"
-      }
-    ]
-  }
-}</code></pre>
+                        <div class="mb-8">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">List Templates</h3>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="endpoint-badge method-get">GET</span>
+                                <code class="text-lg font-mono">/api/v1/templates</code>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Rate Limits -->
-                <section id="rate-limits" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Rate Limits</h1>
+                <!-- Rate Limits Section -->
+                <section id="rate-limits" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Rate Limits</h2>
                         
-                        <p class="text-lg text-gray-600 mb-6">
-                            To ensure fair usage and system stability, we implement rate limits on our API.
-                        </p>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Email Limits</h2>
-                        
-                        <div class="overflow-x-auto mb-6">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account Type</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Daily Limit</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Burst Limit</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Unverified</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">1,000 emails/day</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">100 emails/5 minutes</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Verified</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Unlimited</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">100 emails/5 minutes</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">Enterprise</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Unlimited</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Custom</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="grid md:grid-cols-2 gap-6 mb-8">
+                            <div class="p-6 bg-gray-50 rounded-xl">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Free Tier</h3>
+                                <ul class="space-y-2 text-gray-600">
+                                    <li>• 1,000 emails per day</li>
+                                    <li>• 60 API requests per minute</li>
+                                    <li>• Basic analytics</li>
+                                </ul>
+                            </div>
+                            <div class="p-6 bg-primary-50 rounded-xl">
+                                <h3 class="text-lg font-semibold text-primary-900 mb-2">Verified Users</h3>
+                                <ul class="space-y-2 text-primary-700">
+                                    <li>• Unlimited emails</li>
+                                    <li>• 120 API requests per minute</li>
+                                    <li>• Advanced analytics</li>
+                                </ul>
+                            </div>
                         </div>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">API Call Limits</h2>
-                        
-                        <ul class="list-disc list-inside space-y-2 mb-6 text-gray-600">
-                            <li>60 requests per minute</li>
-                            <li>3,600 requests per hour</li>
-                            <li>50,000 requests per day</li>
-                        </ul>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Rate Limit Headers</h2>
-                        <p class="text-gray-600 mb-4">
-                            All API responses include rate limit information in the headers:
-                        </p>
-                        
-                        <div class="code-block mb-6">
-<pre><code>X-RateLimit-Limit: 60
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Rate Limit Headers</h3>
+                            <div class="code-block p-4">
+                                <pre><code>X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 45
 X-RateLimit-Reset: 1640995200
 X-Email-Limit-Daily: 1000
 X-Email-Limit-Remaining: 750</code></pre>
-                        </div>
-
-                        <div class="bg-red-50 border-l-4 border-red-400 p-4">
-                            <div class="flex">
-                                <div class="ml-3">
-                                    <p class="text-sm text-red-700">
-                                        <strong>Rate Limit Exceeded:</strong> When limits are exceeded, you'll receive a 429 status code. Implement exponential backoff in your applications.
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Error Handling -->
-                <section id="error-handling" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">Error Handling</h1>
+                <!-- Webhooks Section -->
+                <section id="webhooks" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Webhooks</h2>
                         
-                        <p class="text-lg text-gray-600 mb-6">
-                            The Kale API uses conventional HTTP status codes and provides detailed error messages.
-                        </p>
+                        <div class="mb-8">
+                            <p class="text-gray-600 mb-6">
+                                Webhooks allow you to receive real-time notifications about email delivery events.
+                            </p>
+                            
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Supported Events</h3>
+                            <ul class="list-disc list-inside space-y-2 text-gray-600 mb-6">
+                                <li><code class="bg-gray-100 px-2 py-1 rounded">email.sent</code> - Email was successfully sent</li>
+                                <li><code class="bg-gray-100 px-2 py-1 rounded">email.delivered</code> - Email was delivered to recipient</li>
+                                <li><code class="bg-gray-100 px-2 py-1 rounded">email.bounced</code> - Email bounced</li>
+                                <li><code class="bg-gray-100 px-2 py-1 rounded">email.failed</code> - Email failed to send</li>
+                            </ul>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">HTTP Status Codes</h2>
-                        
-                        <div class="overflow-x-auto mb-6">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-green-600">200</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">OK</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Request successful</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">400</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Bad Request</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Invalid request data</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">401</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Unauthorized</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Invalid or missing API key</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">403</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Forbidden</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Account suspended or insufficient permissions</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">404</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Not Found</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Template or user not found</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">429</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Too Many Requests</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Rate limit exceeded</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-6 py-4 text-sm font-medium text-red-600">500</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Server Error</td>
-                                        <td class="px-6 py-4 text-sm text-gray-500">Internal server error</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Webhook Payload Example</h3>
+                            <div class="code-block p-4">
+                                <pre><code>{
+  "event": "email.delivered",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "data": {
+    "email_id": "email_xyz789",
+    "recipient": "user@example.com",
+    "template_id": "welcome-email",
+    "delivery_time": "2.3s"
+  }
+}</code></pre>
+                            </div>
                         </div>
+                    </div>
+                </section>
 
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Error Response Format</h2>
-                        <div class="code-block mb-6">
-<pre><code>{
+                <!-- Error Handling Section -->
+                <section id="errors" class="mb-12">
+                    <div class="glass-card rounded-2xl p-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-6">Error Handling</h2>
+                        
+                        <div class="mb-8">
+                            <p class="text-gray-600 mb-6">
+                                Kale uses conventional HTTP status codes to indicate the success or failure of API requests.
+                            </p>
+                            
+                            <div class="grid gap-4 mb-6">
+                                <div class="flex items-start gap-4 p-4 bg-emerald-50 rounded-lg">
+                                    <span class="text-emerald-600 font-mono font-bold">200</span>
+                                    <div>
+                                        <h4 class="font-semibold text-emerald-900">OK</h4>
+                                        <p class="text-emerald-700 text-sm">Request successful</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4 p-4 bg-red-50 rounded-lg">
+                                    <span class="text-red-600 font-mono font-bold">400</span>
+                                    <div>
+                                        <h4 class="font-semibold text-red-900">Bad Request</h4>
+                                        <p class="text-red-700 text-sm">Invalid request parameters</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4 p-4 bg-red-50 rounded-lg">
+                                    <span class="text-red-600 font-mono font-bold">401</span>
+                                    <div>
+                                        <h4 class="font-semibold text-red-900">Unauthorized</h4>
+                                        <p class="text-red-700 text-sm">Invalid or missing API key</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4 p-4 bg-amber-50 rounded-lg">
+                                    <span class="text-amber-600 font-mono font-bold">429</span>
+                                    <div>
+                                        <h4 class="font-semibold text-amber-900">Too Many Requests</h4>
+                                        <p class="text-amber-700 text-sm">Rate limit exceeded</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h3 class="text-xl font-semibold text-gray-900 mb-4">Error Response Format</h3>
+                            <div class="code-block p-4">
+                                <pre><code>{
   "success": false,
   "error": {
-    "code": "INVALID_RECIPIENTS",
-    "message": "One or more recipient email addresses are invalid",
+    "code": "INVALID_API_KEY",
+    "message": "The provided API key is invalid",
     "details": {
-      "invalid_emails": ["invalid-email", "another@invalid"]
+      "request_id": "req_abc123def456"
     }
-  },
-  "request_id": "req_abc123def456"
+  }
 }</code></pre>
-                        </div>
-
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Common Error Codes</h2>
-                        
-                        <div class="space-y-4">
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <h4 class="font-semibold text-gray-900">INVALID_API_KEY</h4>
-                                <p class="text-gray-600">The provided API key is invalid or has been revoked.</p>
-                            </div>
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <h4 class="font-semibold text-gray-900">TEMPLATE_NOT_FOUND</h4>
-                                <p class="text-gray-600">The specified template does not exist or is not accessible.</p>
-                            </div>
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <h4 class="font-semibold text-gray-900">RATE_LIMIT_EXCEEDED</h4>
-                                <p class="text-gray-600">You have exceeded your rate limit. Wait before making more requests.</p>
-                            </div>
-                            <div class="border border-gray-200 rounded-lg p-4">
-                                <h4 class="font-semibold text-gray-900">SMTP_CONFIG_MISSING</h4>
-                                <p class="text-gray-600">No SMTP configuration found. Please configure your email server.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- SDKs -->
-                <section id="sdks" class="doc-section hidden">
-                    <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-6">SDKs & Libraries</h1>
-                        
-                        <p class="text-lg text-gray-600 mb-6">
-                            Official and community SDKs to integrate Kale into your applications.
-                        </p>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div class="border border-gray-200 rounded-lg p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-3">JavaScript/Node.js</h3>
-                                <div class="code-block mb-4">
-<pre><code>npm install kale-email-api</code></pre>
-                                </div>
-                                <div class="code-block">
-<pre><code>const Kale = require('kale-email-api');
-
-const kale = new Kale({
-  apiKey: 'your-api-key',
-  username: 'yourname'
-});
-
-await kale.send('welcome-email', {
-  recipients: ['user@example.com'],
-  variables: { name: 'John' }
-});</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="border border-gray-200 rounded-lg p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-3">Python</h3>
-                                <div class="code-block mb-4">
-<pre><code>pip install kale-email-api</code></pre>
-                                </div>
-                                <div class="code-block">
-<pre><code>from kale import KaleAPI
-
-kale = KaleAPI(
-    api_key='your-api-key',
-    username='yourname'
-)
-
-response = kale.send(
-    template_id='welcome-email',
-    recipients=['user@example.com'],
-    variables={'name': 'John'}
-)</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="border border-gray-200 rounded-lg p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-3">PHP</h3>
-                                <div class="code-block mb-4">
-<pre><code>composer require kale/email-api</code></pre>
-                                </div>
-                                <div class="code-block">
-<pre><code>use Kale\EmailAPI;
-
-$kale = new EmailAPI([
-    'api_key' => 'your-api-key',
-    'username' => 'yourname'
-]);
-
-$response = $kale->send('welcome-email', [
-    'recipients' => ['user@example.com'],
-    'variables' => ['name' => 'John']
-]);</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="border border-gray-200 rounded-lg p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-3">cURL</h3>
-                                <p class="text-gray-600 mb-4">Use with any language that supports HTTP requests:</p>
-                                <div class="code-block">
-<pre><code>curl -X POST \
-  "https://kale.kanopus.org/yourname/welcome" \
-  -H "Authorization: Bearer your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{"recipients":["user@example.com"]}'</code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
-                            <div class="flex">
-                                <div class="ml-3">
-                                    <p class="text-sm text-blue-700">
-                                        <strong>Coming Soon:</strong> We're working on SDKs for Go, Ruby, Java, and .NET. 
-                                        <a href="/support" class="underline">Contact us</a> if you need a specific language.
-                                    </p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -617,47 +874,53 @@ $response = $kale->send('welcome-email', [
         </div>
     </div>
 
-    <script>
-        function showSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('.doc-section').forEach(section => {
-                section.classList.add('hidden');
-            });
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-20 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h3 class="text-2xl font-bold mb-6 bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">Kale</h3>
+                    <p class="text-gray-400 mb-4">Professional Email API Platform</p>
+                    <p class="text-gray-400">Built by <a href="https://kanopus.org" target="_blank" class="text-accent-400 hover:text-accent-300 transition-colors">Kanopus Development</a></p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Product</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/" class="hover:text-primary-400 transition-colors">Home</a></li>
+                        <li><a href="/docs" target="_blank" class="hover:text-primary-400 transition-colors">Documentation</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Resources</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="https://github.com/Kanopusdev/kale" target="_blank" class="hover:text-primary-400 transition-colors">GitHub</a></li>
+                        <li><a href="/support" class="hover:text-primary-400 transition-colors">Support</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-6 text-white">Legal</h4>
+                    <ul class="space-y-3 text-gray-400">
+                        <li><a href="/privacy" class="hover:text-primary-400 transition-colors">Privacy Policy</a></li>
+                        <li><a href="/terms" class="hover:text-primary-400 transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
             
-            // Remove active class from all nav links
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-            });
-            
-            // Show selected section
-            document.getElementById(sectionId).classList.remove('hidden');
-            
-            // Add active class to clicked nav link
-            event.target.classList.add('active');
-        }
+            <div class="border-t border-gray-800 pt-8">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="text-gray-400 text-sm mb-4 md:mb-0">
+                        © 2025 Kanopus Development. Licensed under MIT.
+                    </div>
+                    <div class="text-gray-400 text-sm">
+                        Made with <span class="text-red-400">❤️</span> for developers worldwide
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 
-        // Check authentication
-        function checkAuth() {
-            const token = localStorage.getItem('token');
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            
-            if (token && user.username) {
-                document.getElementById('user-info').textContent = `${user.username}`;
-            } else {
-                document.getElementById('user-info').textContent = 'Not logged in';
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/';
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAuth();
-        });
-    </script>
+    <!-- Main JavaScript -->
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/docs.js"></script>
 </body>
 </html>

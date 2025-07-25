@@ -620,14 +620,53 @@ class TemplateManager:
     
     def create_custom_template(self, template_data: Dict[str, Any], user_id: str) -> EmailTemplate:
         """Create a custom user template"""
+        # Process variables - handle both string array and dict array formats
+        variables = []
+        if "variables" in template_data and template_data["variables"]:
+            # Handle variables that come as comma-separated string from frontend
+            if isinstance(template_data["variables"], str):
+                var_list = [v.strip() for v in template_data["variables"].split(",") if v.strip()]
+            elif isinstance(template_data["variables"], list):
+                var_list = template_data["variables"]
+            else:
+                var_list = []
+            
+            for var in var_list:
+                if isinstance(var, str):
+                    # Handle frontend format: array of strings or comma-separated string
+                    variables.append(TemplateVariable(
+                        name=var.strip(),
+                        type="text",
+                        label=var.strip().replace("_", " ").title(),
+                        description=f"Variable: {var.strip()}",
+                        required=True
+                    ))
+                elif isinstance(var, dict):
+                    # Handle API format: array of dicts
+                    variables.append(TemplateVariable(**var))
+                else:
+                    # Skip invalid variable formats
+                    continue
+        
+        # Generate template ID
+        if "template_id" in template_data and template_data["template_id"]:
+            # Use provided template_id (sanitize it)
+            template_id = template_data["template_id"].strip().lower().replace(" ", "_")
+            # Ensure uniqueness
+            if template_id in self.templates:
+                template_id = f"{template_id}_{user_id}_{int(datetime.now().timestamp())}"
+        else:
+            # Auto-generate template ID
+            template_id = f"custom_{user_id}_{len([t for t in self.templates.values() if t.created_by == user_id]) + 1}"
+        
         template = EmailTemplate(
-            id=f"custom_{user_id}_{len([t for t in self.templates.values() if t.created_by == user_id]) + 1}",
+            id=template_id,
             name=template_data["name"],
             category=template_data["category"],
             subject=template_data["subject"],
             html_content=template_data["html_content"],
             text_content=template_data["text_content"],
-            variables=[TemplateVariable(**var) for var in template_data["variables"]],
+            variables=variables,
             is_system=False,
             created_by=user_id,
             created_at=datetime.now(),

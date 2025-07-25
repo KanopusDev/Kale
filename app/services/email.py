@@ -44,7 +44,7 @@ class EmailMetrics:
     bounce_rate: float = 0.0
 
 class EmailService:
-    """Enterprise-grade email delivery service with comprehensive features"""
+    """Professional email delivery service with comprehensive features"""
     
     def __init__(self):
         self.connection_pool = {}
@@ -140,19 +140,18 @@ class EmailService:
                 raise ValueError("Invalid SMTP configuration")
             
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
                 
                 # Deactivate existing configs for this user
-                cursor.execute(
+                conn.execute(
                     "UPDATE smtp_configs SET is_active = ?, updated_at = ? WHERE user_id = ?",
                     (False, datetime.utcnow(), user_id)
                 )
                 
                 # Encrypt password before storing
-                encrypted_password = EmailService._encrypt_password(config_data.smtp_password)
+                encrypted_password = EmailService._encrypt_password(config_data.smtp_password) if config_data.smtp_password else ""
                 
                 # Insert new config
-                cursor.execute("""
+                cursor = conn.execute("""
                     INSERT INTO smtp_configs 
                     (user_id, smtp_host, smtp_port, smtp_username, smtp_password, 
                      use_tls, from_email, from_name, is_active, created_at, updated_at,
@@ -171,27 +170,32 @@ class EmailService:
                 config_id = cursor.lastrowid
                 conn.commit()
                 
-                # Fetch created config
-                cursor.execute("SELECT * FROM smtp_configs WHERE id = ?", (config_id,))
-                config_row = cursor.fetchone()
+                # Fetch created config using column names
+                config_row = conn.execute("SELECT * FROM smtp_configs WHERE id = ?", (config_id,)).fetchone()
                 
                 if config_row:
+                    # Handle both old and new column names for password
+                    password_value = None
+                    if 'smtp_password' in config_row.keys():
+                        password_value = config_row['smtp_password']
+                    elif 'smtp_password_encrypted' in config_row.keys():
+                        password_value = config_row['smtp_password_encrypted']
+                    
                     # Decrypt password for return object
-                    decrypted_password = EmailService._decrypt_password(config_row[4])
+                    decrypted_password = EmailService._decrypt_password(password_value) if password_value else ''
                     
                     return SMTPConfig(
-                        id=config_row[0],
-                        user_id=config_row[1],
-                        smtp_host=config_row[2],
-                        smtp_port=config_row[3],
-                        smtp_username=config_row[4],
+                        id=config_row['id'],
+                        user_id=config_row['user_id'],
+                        smtp_host=config_row['smtp_host'],
+                        smtp_port=config_row['smtp_port'],
+                        smtp_username=config_row['smtp_username'],
                         smtp_password=decrypted_password,
-                        use_tls=bool(config_row[5]),
-                        from_email=config_row[6],
-                        from_name=config_row[7],
-                        is_active=bool(config_row[8]),
-                        created_at=config_row[9],
-                        updated_at=config_row[10]
+                        use_tls=bool(config_row['use_tls']),
+                        from_email=config_row['from_email'],
+                        from_name=config_row['from_name'],
+                        is_active=bool(config_row['is_active']),
+                        created_at=config_row['created_at']
                     )
                 return None
             
@@ -244,16 +248,24 @@ class EmailService:
         """Get active SMTP configuration for user"""
         try:
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
                 
-                cursor.execute(
+                config_row = conn.execute(
                     "SELECT * FROM smtp_configs WHERE user_id = ? AND is_active = ? ORDER BY created_at DESC LIMIT 1",
                     (user_id, True)
-                )
-                config_row = cursor.fetchone()
+                ).fetchone()
                 
                 if not config_row:
                     return None
+                
+                # Handle both old and new column names for password
+                password_value = None
+                if 'smtp_password' in config_row.keys():
+                    password_value = config_row['smtp_password']
+                elif 'smtp_password_encrypted' in config_row.keys():
+                    password_value = config_row['smtp_password_encrypted']
+                
+                # Decrypt password if it exists
+                decrypted_password = EmailService._decrypt_password(password_value) if password_value else ''
                 
                 return SMTPConfig(
                     id=config_row['id'],
@@ -261,7 +273,7 @@ class EmailService:
                     smtp_host=config_row['smtp_host'],
                     smtp_port=config_row['smtp_port'],
                     smtp_username=config_row['smtp_username'],
-                    smtp_password=config_row['smtp_password'],
+                    smtp_password=decrypted_password,
                     use_tls=bool(config_row['use_tls']),
                     from_email=config_row['from_email'],
                     from_name=config_row['from_name'],
@@ -275,21 +287,83 @@ class EmailService:
     
     @staticmethod
     def test_smtp_connection(config: SMTPConfig) -> tuple[bool, str]:
-        """Test SMTP connection"""
+        """Test SMTP connection with proper SSL/TLS handling and encoding"""
         try:
-            if config.use_tls:
-                server = smtplib.SMTP(config.smtp_host, config.smtp_port)
-                server.starttls()
-            else:
-                server = smtplib.SMTP_SSL(config.smtp_host, config.smtp_port)
+            # Sanitize and validate config data
+            smtp_host = str(config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
+            smtp_username = str(config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if config.smtp_username else ''
+            smtp_password = str(config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if config.smtp_password else ''
             
-            server.login(config.smtp_username, config.smtp_password)
+            if not smtp_host:
+                return False, "SMTP host is required"
+            
+            # Create SSL context with proper configuration
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            server = None
+            
+            # Handle different connection types based on port and use_tls setting
+            if config.smtp_port == 465:
+                # SSL connection (usually port 465)
+                server = smtplib.SMTP_SSL(smtp_host, config.smtp_port, context=ssl_context)
+            elif config.use_tls and config.smtp_port in [587, 25]:
+                # TLS connection (usually port 587 or 25)
+                server = smtplib.SMTP(smtp_host, config.smtp_port)
+                server.starttls(context=ssl_context)
+            else:
+                # Plain connection or custom configuration
+                if config.use_tls:
+                    server = smtplib.SMTP(smtp_host, config.smtp_port)
+                    server.starttls(context=ssl_context)
+                else:
+                    # Try plain connection first
+                    try:
+                        server = smtplib.SMTP(smtp_host, config.smtp_port)
+                    except Exception:
+                        # If plain fails, try SSL
+                        server = smtplib.SMTP_SSL(smtp_host, config.smtp_port, context=ssl_context)
+            
+            # Check if server supports authentication before attempting login
+            if smtp_username and smtp_password:
+                try:
+                    # Get server capabilities
+                    capabilities = server.ehlo_or_helo_if_needed()
+                    
+                    # Check if AUTH is supported
+                    if hasattr(server, 'has_extn') and server.has_extn('auth'):
+                        server.login(smtp_username, smtp_password)
+                    else:
+                        # Some servers don't require AUTH for local/trusted connections
+                        logger.warning(f"SMTP server {smtp_host} doesn't support AUTH extension, continuing without authentication")
+                except smtplib.SMTPAuthenticationError as auth_error:
+                    server.quit()
+                    return False, f"Authentication failed: {str(auth_error)}"
+                except Exception as login_error:
+                    # If login fails but server doesn't support AUTH, it might still work for sending
+                    logger.warning(f"Login attempt failed: {login_error}, continuing without authentication")
+            
             server.quit()
             return True, "SMTP connection successful"
             
         except Exception as e:
             logger.error(f"SMTP connection test failed: {e}")
-            return False, str(e)
+            error_msg = str(e)
+            
+            # Provide more helpful error messages
+            if "WRONG_VERSION_NUMBER" in error_msg:
+                error_msg = "SSL/TLS configuration mismatch. Try toggling the TLS setting or using a different port (587 for TLS, 465 for SSL, 25 for plain)."
+            elif "authentication failed" in error_msg.lower():
+                error_msg = "Authentication failed. Please check your username and password."
+            elif "connection refused" in error_msg.lower():
+                error_msg = "Connection refused. Please check the host and port settings."
+            elif "auth extension not supported" in error_msg.lower():
+                error_msg = "Server doesn't support authentication. Try connecting without username/password or use a different SMTP server."
+            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
+                error_msg = "Invalid characters in SMTP configuration. Please use only ASCII characters for host, username, and password."
+            
+            return False, error_msg
     
     @staticmethod
     def replace_variables(content: str, variables: Dict[str, Any]) -> str:
@@ -323,8 +397,13 @@ class EmailService:
         text_content: Optional[str] = None,
         variables: Optional[Dict[str, Any]] = None
     ) -> tuple[bool, str]:
-        """Send individual email"""
+        """Send individual email with proper SSL/TLS handling and encoding"""
         try:
+            # Sanitize and validate config data
+            smtp_host = str(smtp_config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
+            smtp_username = str(smtp_config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_username else ''
+            smtp_password = str(smtp_config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_password else ''
+            
             # Replace variables in content
             if variables:
                 subject = EmailService.replace_variables(subject, variables)
@@ -337,6 +416,7 @@ class EmailService:
             message["Subject"] = subject
             message["From"] = f"{smtp_config.from_name} <{smtp_config.from_email}>" if smtp_config.from_name else smtp_config.from_email
             message["To"] = recipient
+            message["Message-ID"] = make_msgid()
             
             # Add text content
             if text_content:
@@ -347,31 +427,276 @@ class EmailService:
             html_part = MIMEText(html_content, "html")
             message.attach(html_part)
             
-            # Send email
-            if smtp_config.use_tls:
-                await aiosmtplib.send(
-                    message,
-                    hostname=smtp_config.smtp_host,
-                    port=smtp_config.smtp_port,
-                    start_tls=True,
-                    username=smtp_config.smtp_username,
-                    password=smtp_config.smtp_password,
-                )
+            # Configure SSL context
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Send email with proper SSL/TLS configuration
+            send_params = {
+                "hostname": smtp_host,
+                "port": smtp_config.smtp_port,
+                "tls_context": ssl_context
+            }
+            
+            # Only include authentication if username is provided
+            if smtp_username:
+                send_params["username"] = smtp_username
+                
+                # Only include password if provided
+                if smtp_password:
+                    send_params["password"] = smtp_password
+            
+            # Handle different connection types based on port and use_tls setting
+            if smtp_config.smtp_port == 465:
+                # SSL connection (usually port 465)
+                send_params["use_tls"] = True
+            elif smtp_config.use_tls and smtp_config.smtp_port in [587, 25]:
+                # TLS connection (usually port 587 or 25)
+                send_params["start_tls"] = True
             else:
-                await aiosmtplib.send(
-                    message,
-                    hostname=smtp_config.smtp_host,
-                    port=smtp_config.smtp_port,
-                    use_tls=True,
-                    username=smtp_config.smtp_username,
-                    password=smtp_config.smtp_password,
-                )
+                # Custom configuration
+                if smtp_config.use_tls:
+                    send_params["start_tls"] = True
+                else:
+                    # Try to determine the best method based on port
+                    if smtp_config.smtp_port == 465:
+                        send_params["use_tls"] = True
+                    else:
+                        send_params["start_tls"] = True
+            
+            # Send email using aiosmtplib with proper parameter handling
+            # Create SMTP client for better control
+            smtp_client = aiosmtplib.SMTP(
+                hostname=send_params["hostname"],
+                port=send_params["port"],
+                tls_context=send_params["tls_context"],
+                use_tls=send_params.get("use_tls", False),
+                start_tls=send_params.get("start_tls", False)
+            )
+            
+            await smtp_client.connect()
+            
+            # Authenticate if credentials provided
+            if send_params.get("username") and send_params.get("password"):
+                await smtp_client.login(send_params["username"], send_params["password"])
+            
+            # Send the message
+            await smtp_client.send_message(message)
+            await smtp_client.quit()
             
             return True, "Email sent successfully"
             
         except Exception as e:
             logger.error(f"Error sending email: {e}")
-            return False, str(e)
+            error_msg = str(e)
+            
+            # Provide more helpful error messages
+            if "WRONG_VERSION_NUMBER" in error_msg:
+                error_msg = "SSL/TLS configuration mismatch. Please check your SMTP settings."
+            elif "authentication failed" in error_msg.lower():
+                error_msg = "Authentication failed. Please check your username and password."
+            elif "connection refused" in error_msg.lower():
+                error_msg = "Connection refused. Please check the host and port settings."
+            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
+                error_msg = "Invalid characters in email content or SMTP configuration. Please use only ASCII characters."
+            
+            return False, error_msg
+    
+    async def send_email_enhanced(
+        self,
+        user_id: int,
+        template_id: str,
+        recipient_email: str,
+        variables: Optional[Dict[str, Any]] = None,
+        smtp_config: Optional[SMTPConfig] = None,
+        custom_headers: Optional[Dict[str, str]] = None,
+        message_id: Optional[str] = None
+    ) -> tuple[bool, str, str]:
+        """Enhanced email sending method with template support and logging"""
+        try:
+            # Get template using database query directly
+            template = None
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM email_templates 
+                    WHERE template_id = ? AND (user_id = ? OR is_public = ? OR is_system_template = ?)
+                """, (template_id, user_id, True, True))
+                template_row = cursor.fetchone()
+                if template_row:
+                    template = dict(template_row)
+            
+            if not template:
+                return False, f"Template {template_id} not found", ""
+            
+            # Use provided SMTP config or get default for user
+            if not smtp_config:
+                smtp_config = EmailService.get_user_smtp_config(user_id)
+                if not smtp_config:
+                    return False, "No SMTP configuration found", ""
+            
+            # Prepare variables (merge template defaults with provided)
+            final_variables = {}
+            if template.get('default_variables'):
+                try:
+                    default_vars = json.loads(template['default_variables'])
+                    if isinstance(default_vars, dict):
+                        final_variables.update(default_vars)
+                except json.JSONDecodeError:
+                    pass
+            
+            if variables:
+                final_variables.update(variables)
+            
+            # Replace variables in template content
+            subject = template['subject']
+            html_content = template['html_content']
+            text_content = template.get('text_content')
+            
+            if final_variables:
+                subject = EmailService.replace_variables(subject, final_variables)
+                html_content = EmailService.replace_variables(html_content, final_variables)
+                if text_content:
+                    text_content = EmailService.replace_variables(text_content, final_variables)
+            
+            # Generate message ID if not provided
+            if not message_id:
+                message_id = make_msgid()
+            
+            # Create message with custom headers
+            message = MIMEMultipart("alternative")
+            message["Subject"] = subject
+            message["From"] = f"{smtp_config.from_name} <{smtp_config.from_email}>" if smtp_config.from_name else smtp_config.from_email
+            message["To"] = recipient_email
+            message["Message-ID"] = message_id
+            
+            # Add custom headers
+            if custom_headers:
+                for header_name, header_value in custom_headers.items():
+                    message[header_name] = header_value
+            
+            # Add content parts
+            if text_content:
+                text_part = MIMEText(text_content, "plain")
+                message.attach(text_part)
+            
+            html_part = MIMEText(html_content, "html")
+            message.attach(html_part)
+            
+            # Send using existing send_email logic
+            smtp_host = str(smtp_config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
+            smtp_username = str(smtp_config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_username else ''
+            smtp_password = str(smtp_config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_password else ''
+            
+            # Configure SSL context
+            ssl_context = ssl.create_default_context(cafile=certifi.where())
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Send email with proper SSL/TLS configuration
+            send_params = {
+                "hostname": smtp_host,
+                "port": smtp_config.smtp_port,
+                "tls_context": ssl_context
+            }
+            
+            # Only include authentication if username is provided
+            if smtp_username:
+                send_params["username"] = smtp_username
+                if smtp_password:
+                    send_params["password"] = smtp_password
+            
+            # Handle different connection types based on port and use_tls setting
+            if smtp_config.smtp_port == 465:
+                send_params["use_tls"] = True
+            elif smtp_config.use_tls and smtp_config.smtp_port in [587, 25]:
+                send_params["start_tls"] = True
+            else:
+                if smtp_config.use_tls:
+                    send_params["start_tls"] = True
+                else:
+                    if smtp_config.smtp_port == 465:
+                        send_params["use_tls"] = True
+                    else:
+                        send_params["start_tls"] = True
+            
+            # Create SMTP client
+            smtp_client = aiosmtplib.SMTP(
+                hostname=send_params["hostname"],
+                port=send_params["port"],
+                tls_context=send_params["tls_context"],
+                use_tls=send_params.get("use_tls", False),
+                start_tls=send_params.get("start_tls", False)
+            )
+            
+            await smtp_client.connect()
+            
+            # Authenticate if credentials provided
+            if send_params.get("username") and send_params.get("password"):
+                await smtp_client.login(send_params["username"], send_params["password"])
+            
+            # Send the message
+            await smtp_client.send_message(message)
+            await smtp_client.quit()
+            
+            # Log successful email
+            EmailService.log_email(
+                user_id=user_id,
+                template_id=template_id,
+                recipient=recipient_email,
+                subject=subject,
+                status="sent"
+            )
+            
+            # Update user statistics
+            await self._update_user_email_stats(user_id)
+            
+            return True, "Email sent successfully", message_id
+            
+        except Exception as e:
+            logger.error(f"Error in send_email_enhanced: {e}")
+            error_msg = str(e)
+            
+            # Provide more helpful error messages
+            if "WRONG_VERSION_NUMBER" in error_msg:
+                error_msg = "SSL/TLS configuration mismatch. Please check your SMTP settings."
+            elif "authentication failed" in error_msg.lower():
+                error_msg = "Authentication failed. Please check your username and password."
+            elif "connection refused" in error_msg.lower():
+                error_msg = "Connection refused. Please check the host and port settings."
+            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
+                error_msg = "Invalid characters in email content or SMTP configuration. Please use only ASCII characters."
+            
+            # Log failed email
+            EmailService.log_email(
+                user_id=user_id,
+                template_id=template_id,
+                recipient=recipient_email,
+                subject=subject if 'subject' in locals() else "Unknown",
+                status="failed",
+                error_message=error_msg
+            )
+            
+            return False, error_msg, ""
+    
+    async def _update_user_email_stats(self, user_id: int) -> None:
+        """Update user email statistics"""
+        try:
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Update total emails sent and last API call
+                cursor.execute("""
+                    UPDATE users 
+                    SET total_emails_sent = COALESCE(total_emails_sent, 0) + 1,
+                        emails_sent_today = COALESCE(emails_sent_today, 0) + 1,
+                        last_api_call = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (user_id,))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Error updating user email stats: {e}")
     
     @staticmethod
     def log_email(

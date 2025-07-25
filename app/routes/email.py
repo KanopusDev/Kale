@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
+from datetime import datetime
 from app.models.schemas import (
     SMTPConfig, SMTPConfigCreate, User, EmailSendRequest, EmailLog
 )
@@ -21,21 +22,22 @@ async def create_smtp_config(
 ):
     """Create SMTP configuration"""
     try:
-        # Test SMTP connection first
-        test_config = SMTPConfig(
-            id=0,
-            user_id=current_user.id,
-            **config_data.dict(),
-            is_active=True,
-            created_at=""
-        )
-        
-        is_valid, error_message = email.test_smtp_connection(test_config)
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"SMTP connection failed: {error_message}"
+        # Test SMTP connection first (only if password is provided)
+        if config_data.smtp_password:
+            test_config = SMTPConfig(
+                id=0,
+                user_id=current_user.id,
+                **config_data.dict(),
+                is_active=True,
+                created_at=datetime.now()
             )
+            
+            is_valid, error_message = email.test_smtp_connection(test_config)
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"SMTP connection failed: {error_message}"
+                )
         
         # Create SMTP config
         smtp_config = email.create_smtp_config(current_user.id, config_data)
@@ -57,18 +59,55 @@ async def create_smtp_config(
             detail="SMTP configuration failed"
         )
 
-@router.get("/smtp", response_model=SMTPConfig)
+@router.get("/smtp")
 async def get_smtp_config(current_user: User = Depends(get_current_user)):
     """Get user's SMTP configuration"""
     try:
         smtp_config = email.get_user_smtp_config(current_user.id)
         if not smtp_config:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="SMTP configuration not found"
-            )
+            # Return empty configuration instead of 404
+            return {
+                "id": None,
+                "user_id": current_user.id,
+                "name": "Default",
+                "smtp_host": "",
+                "smtp_port": 587,
+                "smtp_username": "",
+                "smtp_password": "",
+                "use_tls": True,
+                "use_ssl": False,
+                "from_email": "",
+                "from_name": "",
+                "is_active": False,
+                "is_verified": False,
+                "last_used": None,
+                "created_at": None,
+                "updated_at": None,
+                "configured": False
+            }
         
-        return smtp_config
+        # Hide sensitive data
+        smtp_config_dict = {
+            "id": smtp_config.id if hasattr(smtp_config, 'id') else None,
+            "user_id": current_user.id,
+            "name": smtp_config.name if hasattr(smtp_config, 'name') else "Default",
+            "smtp_host": smtp_config.smtp_host if hasattr(smtp_config, 'smtp_host') else "",
+            "smtp_port": smtp_config.smtp_port if hasattr(smtp_config, 'smtp_port') else 587,
+            "smtp_username": smtp_config.smtp_username if hasattr(smtp_config, 'smtp_username') else "",
+            "smtp_password": "***" if hasattr(smtp_config, 'smtp_password') and smtp_config.smtp_password else "",
+            "use_tls": smtp_config.use_tls if hasattr(smtp_config, 'use_tls') else True,
+            "use_ssl": smtp_config.use_ssl if hasattr(smtp_config, 'use_ssl') else False,
+            "from_email": smtp_config.from_email if hasattr(smtp_config, 'from_email') else "",
+            "from_name": smtp_config.from_name if hasattr(smtp_config, 'from_name') else "",
+            "is_active": smtp_config.is_active if hasattr(smtp_config, 'is_active') else False,
+            "is_verified": smtp_config.is_verified if hasattr(smtp_config, 'is_verified') else False,
+            "last_used": smtp_config.last_used if hasattr(smtp_config, 'last_used') else None,
+            "created_at": smtp_config.created_at if hasattr(smtp_config, 'created_at') else None,
+            "updated_at": smtp_config.updated_at if hasattr(smtp_config, 'updated_at') else None,
+            "configured": True
+        }
+        
+        return smtp_config_dict
         
     except HTTPException:
         raise
@@ -100,6 +139,88 @@ async def test_smtp_config(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="SMTP test failed"
+        )
+
+@router.post("/send-test")
+async def send_test_email(
+    test_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Send a test email using the user's SMTP configuration"""
+    try:
+        # Get user's SMTP config
+        smtp_config = email.get_user_smtp_config(current_user.id)
+        if not smtp_config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="SMTP configuration not found. Please configure SMTP settings first."
+            )
+        
+        # Extract test email data
+        recipient_email = test_data.get('to_email') or test_data.get('recipient_email')
+        template_id = test_data.get('template_id')
+        subject = test_data.get('subject', 'Test Email from Kale')
+        message = test_data.get('message', 'This is a test email sent from Kale Email API Platform.')
+        
+        if not recipient_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Recipient email is required"
+            )
+        
+        # If template_id is provided, use template
+        html_content = None
+        text_content = None
+        variables = test_data.get('variables', {})
+        
+        if template_id:
+            # Get template
+            template_obj = template.get_template_by_id(current_user.id, template_id)
+            if template_obj:
+                subject = template_obj.subject
+                html_content = template_obj.html_content
+                text_content = template_obj.text_content
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Template not found"
+                )
+        else:
+            # Use provided message as HTML content
+            html_content = f"<html><body><p>{message}</p></body></html>"
+            text_content = message
+        
+        # Send test email
+        success, error_message = await email.send_email(
+            smtp_config=smtp_config,
+            recipient=recipient_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            variables=variables
+        )
+        
+        if success:
+            # Log the test email
+            email.log_email(
+                user_id=current_user.id,
+                template_id=template_id or 'test-email',
+                recipient=recipient_email,
+                subject=subject,
+                status='sent'
+            )
+            
+            return {"success": True, "message": "Test email sent successfully"}
+        else:
+            return {"success": False, "message": f"Failed to send test email: {error_message}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Send test email error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send test email"
         )
 
 @router.get("/logs", response_model=List[EmailLog])

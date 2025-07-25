@@ -45,27 +45,24 @@ class UserAPIManager:
     def store_api_key(user_id: int, api_key: str, name: str = "Default") -> Dict[str, Any]:
         """Store API key in database"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            # Hash the API key for storage
-            api_key_hash = UserAPIManager.hash_api_key(api_key)
-            
-            cursor.execute("""
-                INSERT INTO user_api_keys (user_id, api_key_hash, key_name, created_at, last_used)
-                VALUES (?, ?, ?, ?, ?)
-            """, (user_id, api_key_hash, name, datetime.now(), None))
-            
-            api_key_id = cursor.lastrowid
-            conn.commit()
-            conn.close()
-            
-            return {
-                "id": api_key_id,
-                "api_key": api_key,  # Return the actual key only once
-                "name": name,
-                "created_at": datetime.now().isoformat()
-            }
+            with db_manager.get_db_connection() as conn:
+                
+                # Hash the API key for storage
+                api_key_hash = UserAPIManager.hash_api_key(api_key)
+                
+                cursor = conn.execute("""
+                    INSERT INTO user_api_keys (user_id, api_key, api_key_hash, key_name, created_at, last_used)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (user_id, api_key, api_key_hash, name, datetime.now(), None))
+                
+                api_key_id = cursor.lastrowid
+                
+                return {
+                    "id": api_key_id,
+                    "api_key": api_key,  # Return the actual key only once
+                    "name": name,
+                    "created_at": datetime.now().isoformat()
+                }
             
         except Exception as e:
             logger.error(f"Failed to store API key: {e}")
@@ -78,33 +75,29 @@ class UserAPIManager:
     def verify_api_key(api_key: str) -> Optional[Dict[str, Any]]:
         """Verify API key and return user info"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            api_key_hash = UserAPIManager.hash_api_key(api_key)
-            
-            cursor.execute("""
-                SELECT uak.id, uak.user_id, uak.key_name, u.username, u.email, u.is_verified
-                FROM user_api_keys uak
-                JOIN users u ON uak.user_id = u.id
-                WHERE uak.api_key_hash = ? AND uak.is_active = 1
-            """, (api_key_hash,))
-            
-            result = cursor.fetchone()
-            conn.close()
-            
-            if result:
-                # Update last used timestamp
-                UserAPIManager.update_api_key_usage(result[0])
+            with db_manager.get_db_connection() as conn:
                 
-                return {
-                    "api_key_id": result[0],
-                    "user_id": result[1],
-                    "key_name": result[2],
-                    "username": result[3],
-                    "email": result[4],
-                    "is_verified": bool(result[5])
-                }
+                api_key_hash = UserAPIManager.hash_api_key(api_key)
+                
+                result = conn.execute("""
+                    SELECT uak.id, uak.user_id, uak.key_name, u.username, u.email, u.is_verified
+                    FROM user_api_keys uak
+                    JOIN users u ON uak.user_id = u.id
+                    WHERE uak.api_key_hash = ? AND uak.is_active = 1
+                """, (api_key_hash,)).fetchone()
+                
+                if result:
+                    # Update last used timestamp
+                    UserAPIManager.update_api_key_usage(result[0])
+                    
+                    return {
+                        "api_key_id": result[0],
+                        "user_id": result[1],
+                        "key_name": result[2],
+                        "username": result[3],
+                        "email": result[4],
+                        "is_verified": bool(result[5])
+                    }
             
             return None
             
@@ -116,17 +109,13 @@ class UserAPIManager:
     def update_api_key_usage(api_key_id: int):
         """Update last used timestamp for API key"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                UPDATE user_api_keys 
-                SET last_used = ?, usage_count = usage_count + 1
-                WHERE id = ?
-            """, (datetime.now(), api_key_id))
-            
-            conn.commit()
-            conn.close()
+            with db_manager.get_db_connection() as conn:
+                
+                conn.execute("""
+                    UPDATE user_api_keys 
+                    SET last_used = ?, usage_count = usage_count + 1
+                    WHERE id = ?
+                """, (datetime.now(), api_key_id))
             
         except Exception as e:
             logger.error(f"Failed to update API key usage: {e}")
@@ -134,37 +123,66 @@ class UserAPIManager:
 
 # API Key Management Endpoints
 
-@router.get("/user/api-keys")
-async def list_user_api_keys(current_user: User = Depends(get_current_user)):
-    """List user's API keys"""
+@router.get("/user/profile")
+async def get_user_profile(current_user: User = Depends(get_current_user)):
+    """Get current user profile information"""
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT id, key_name, created_at, last_used, usage_count, is_active
-            FROM user_api_keys
-            WHERE user_id = ?
-            ORDER BY created_at DESC
-        """, (current_user.id,))
-        
-        keys = []
-        for row in cursor.fetchall():
-            keys.append({
-                "id": row[0],
-                "name": row[1],
-                "created_at": row[2],
-                "last_used": row[3],
-                "usage_count": row[4] or 0,
-                "is_active": bool(row[5])
-            })
-        
-        conn.close()
-        
         return {
-            "api_keys": keys,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+                "email": current_user.email,
+                "is_verified": current_user.is_verified,
+                "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+            },
             "api_endpoint": UserAPIManager.create_user_api_endpoint(current_user.username)
         }
+    except Exception as e:
+        logger.error(f"Failed to get user profile: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve user profile"
+        )
+
+@router.get("/user/api-keys")
+async def list_user_api_keys(
+    include_inactive: bool = False,
+    current_user: User = Depends(get_current_user)
+):
+    """List user's API keys"""
+    try:
+        with db_manager.get_db_connection() as conn:
+            
+            # Only show active keys by default
+            query = """
+                SELECT id, key_name, created_at, last_used, usage_count, is_active
+                FROM user_api_keys
+                WHERE user_id = ?
+            """
+            params = [current_user.id]
+            
+            if not include_inactive:
+                query += " AND is_active = 1"
+            
+            query += " ORDER BY created_at DESC"
+            
+            results = conn.execute(query, params).fetchall()
+            
+            keys = []
+            for row in results:
+                keys.append({
+                    "id": row[0],
+                    "name": row[1],
+                    "created_at": row[2],
+                    "last_used": row[3],
+                    "usage_count": row[4] or 0,
+                    "is_active": bool(row[5])
+                })
+            
+            return {
+                "api_keys": keys,
+                "api_endpoint": UserAPIManager.create_user_api_endpoint(current_user.username)
+            }
         
     except Exception as e:
         logger.error(f"Failed to list API keys: {e}")
@@ -211,24 +229,20 @@ async def delete_api_key(
 ):
     """Delete an API key"""
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        
-        # Verify ownership and delete
-        cursor.execute("""
-            UPDATE user_api_keys 
-            SET is_active = 0, deleted_at = ?
-            WHERE id = ? AND user_id = ?
-        """, (datetime.now(), key_id, current_user.id))
-        
-        if cursor.rowcount == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="API key not found"
-            )
-        
-        conn.commit()
-        conn.close()
+        with db_manager.get_db_connection() as conn:
+            
+            # Verify ownership and delete
+            cursor = conn.execute("""
+                UPDATE user_api_keys 
+                SET is_active = 0, deleted_at = ?
+                WHERE id = ? AND user_id = ?
+            """, (datetime.now().isoformat(), key_id, current_user.id))
+            
+            if cursor.rowcount == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="API key not found"
+                )
         
         return {"message": "API key deleted successfully"}
         
@@ -240,179 +254,6 @@ async def delete_api_key(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete API key"
         )
-
-
-# Template Management Endpoints
-
-@router.get("/templates")
-async def list_templates(
-    category: Optional[str] = Query(None, description="Filter by category"),
-    current_user: User = Depends(get_current_user)
-):
-    """List available templates"""
-    try:
-        templates = template_manager.list_templates(category=category, user_id=str(current_user.id))
-        
-        template_list = []
-        for template in templates:
-            template_list.append({
-                "id": template.id,
-                "name": template.name,
-                "category": template.category,
-                "description": f"Template for {template.category.lower()} emails",
-                "is_system": template.is_system,
-                "tags": template.tags or [],
-                "variable_count": len(template.variables),
-                "created_by": template.created_by if not template.is_system else "System"
-            })
-        
-        return {
-            "templates": template_list,
-            "total": len(template_list),
-            "categories": list(set(t["category"] for t in template_list))
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to list templates: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve templates"
-        )
-
-
-@router.get("/templates/{template_id}")
-async def get_template_details(
-    template_id: str,
-    current_user: User = Depends(get_current_user)
-):
-    """Get detailed template information"""
-    try:
-        template = template_manager.get_template(template_id)
-        if not template:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Template not found"
-            )
-        
-        # Check access permissions
-        if not template.is_system and template.created_by != str(current_user.id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this template"
-            )
-        
-        return {
-            "id": template.id,
-            "name": template.name,
-            "category": template.category,
-            "subject": template.subject,
-            "html_content": template.html_content,
-            "text_content": template.text_content,
-            "variables": [
-                {
-                    "name": var.name,
-                    "type": var.type,
-                    "label": var.label,
-                    "description": var.description,
-                    "required": var.required,
-                    "default_value": var.default_value
-                }
-                for var in template.variables
-            ],
-            "is_system": template.is_system,
-            "tags": template.tags or [],
-            "created_by": template.created_by,
-            "created_at": template.created_at.isoformat() if template.created_at else None
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get template: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve template"
-        )
-
-
-@router.get("/templates/{template_id}/preview")
-async def preview_template(
-    template_id: str,
-    current_user: User = Depends(get_current_user)
-):
-    """Get template preview with sample data"""
-    try:
-        template = template_manager.get_template(template_id)
-        if not template:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Template not found"
-            )
-        
-        # Check access permissions
-        if not template.is_system and template.created_by != str(current_user.id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this template"
-            )
-        
-        preview = template_manager.get_template_preview(template_id)
-        
-        return {
-            "template_id": template_id,
-            "template_name": template.name,
-            "preview": preview,
-            "preview_data": template.preview_data or {}
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to preview template: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate template preview"
-        )
-
-
-@router.post("/templates")
-async def create_custom_template(
-    template_data: Dict[str, Any],
-    current_user: User = Depends(get_current_user)
-):
-    """Create a custom template"""
-    try:
-        # Validate required fields
-        required_fields = ["name", "category", "subject", "html_content", "text_content", "variables"]
-        for field in required_fields:
-            if field not in template_data:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Missing required field: {field}"
-                )
-        
-        # Create template
-        template = template_manager.create_custom_template(template_data, str(current_user.id))
-        
-        return {
-            "message": "Template created successfully",
-            "template_id": template.id,
-            "template_name": template.name,
-            "category": template.category,
-            "variable_count": len(template.variables)
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to create template: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create template"
-        )
-
-
-# User API Endpoint for External Access
 
 @router.post("/{username}/{template_id}")
 async def send_email_via_user_api(
@@ -512,20 +353,16 @@ async def send_email_via_user_api(
 async def get_daily_email_count(user_id: int) -> int:
     """Get today's email count for user"""
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        
-        today = datetime.now().date()
-        cursor.execute("""
-            SELECT COALESCE(SUM(recipient_count), 0) 
-            FROM email_logs 
-            WHERE user_id = ? AND DATE(sent_at) = ?
-        """, (user_id, today))
-        
-        result = cursor.fetchone()
-        conn.close()
-        
-        return result[0] if result else 0
+        with db_manager.get_db_connection() as conn:
+            
+            today = datetime.now().date()
+            result = conn.execute("""
+                SELECT COALESCE(SUM(recipient_count), 0) 
+                FROM email_logs 
+                WHERE user_id = ? AND DATE(sent_at) = ?
+            """, (user_id, today)).fetchone()
+            
+            return result[0] if result else 0
         
     except Exception as e:
         logger.error(f"Failed to get daily email count: {e}")
@@ -535,16 +372,12 @@ async def get_daily_email_count(user_id: int) -> int:
 async def log_email_send(user_id: int, template_id: str, recipient_count: int):
     """Log email send activity"""
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            INSERT INTO email_logs (user_id, template_id, recipient_count, sent_at)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, template_id, recipient_count, datetime.now()))
-        
-        conn.commit()
-        conn.close()
+        with db_manager.get_db_connection() as conn:
+            
+            conn.execute("""
+                INSERT INTO email_logs (user_id, template_id, recipient_count, sent_at)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, template_id, recipient_count, datetime.now()))
         
     except Exception as e:
         logger.error(f"Failed to log email send: {e}")
@@ -556,61 +389,54 @@ async def log_email_send(user_id: int, template_id: str, recipient_count: int):
 async def get_user_statistics(current_user: User = Depends(get_current_user)):
     """Get user email statistics"""
     try:
-        conn = db_manager.get_db_connection()
-        cursor = conn.cursor()
-        
-        # Get total emails sent
-        cursor.execute("""
-            SELECT COALESCE(SUM(recipient_count), 0) 
-            FROM email_logs 
-            WHERE user_id = ?
-        """, (current_user.id,))
-        total_emails = cursor.fetchone()[0]
-        
-        # Get today's emails
-        today = datetime.now().date()
-        cursor.execute("""
-            SELECT COALESCE(SUM(recipient_count), 0) 
-            FROM email_logs 
-            WHERE user_id = ? AND DATE(sent_at) = ?
-        """, (current_user.id, today))
-        today_emails = cursor.fetchone()[0]
-        
-        # Get this month's emails
-        month_start = datetime.now().replace(day=1).date()
-        cursor.execute("""
-            SELECT COALESCE(SUM(recipient_count), 0) 
-            FROM email_logs 
-            WHERE user_id = ? AND DATE(sent_at) >= ?
-        """, (current_user.id, month_start))
-        month_emails = cursor.fetchone()[0]
-        
-        # Get API key count
-        cursor.execute("""
-            SELECT COUNT(*) FROM user_api_keys 
-            WHERE user_id = ? AND is_active = 1
-        """, (current_user.id,))
-        api_key_count = cursor.fetchone()[0]
-        
-        conn.close()
-        
-        return {
-            "user": {
-                "username": current_user.username,
-                "email": current_user.email,
-                "is_verified": current_user.is_verified,
-                "created_at": current_user.created_at.isoformat()
-            },
-            "statistics": {
-                "total_emails_sent": total_emails,
-                "emails_today": today_emails,
-                "emails_this_month": month_emails,
-                "active_api_keys": api_key_count,
-                "daily_limit": None if current_user.is_verified else 1000,
-                "remaining_today": None if current_user.is_verified else max(0, 1000 - today_emails)
-            },
-            "api_endpoint": UserAPIManager.create_user_api_endpoint(current_user.username)
-        }
+        with db_manager.get_db_connection() as conn:
+            
+            # Get total emails sent
+            total_emails = conn.execute("""
+                SELECT COALESCE(SUM(recipient_count), 0) 
+                FROM email_logs 
+                WHERE user_id = ?
+            """, (current_user.id,)).fetchone()[0]
+            
+            # Get today's emails
+            today = datetime.now().date()
+            today_emails = conn.execute("""
+                SELECT COALESCE(SUM(recipient_count), 0) 
+                FROM email_logs 
+                WHERE user_id = ? AND DATE(sent_at) = ?
+            """, (current_user.id, today)).fetchone()[0]
+            
+            # Get this month's emails
+            month_start = datetime.now().replace(day=1).date()
+            month_emails = conn.execute("""
+                SELECT COALESCE(SUM(recipient_count), 0) 
+                FROM email_logs 
+                WHERE user_id = ? AND DATE(sent_at) >= ?
+            """, (current_user.id, month_start)).fetchone()[0]
+            
+            # Get API key count
+            api_key_count = conn.execute("""
+                SELECT COUNT(*) FROM user_api_keys 
+                WHERE user_id = ? AND is_active = 1
+            """, (current_user.id,)).fetchone()[0]
+            
+            return {
+                "user": {
+                    "username": current_user.username,
+                    "email": current_user.email,
+                    "is_verified": current_user.is_verified,
+                    "created_at": current_user.created_at.isoformat()
+                },
+                "statistics": {
+                    "total_emails_sent": total_emails,
+                    "emails_today": today_emails,
+                    "emails_this_month": month_emails,
+                    "active_api_keys": api_key_count,
+                    "daily_limit": None if current_user.is_verified else 1000,
+                    "remaining_today": None if current_user.is_verified else max(0, 1000 - today_emails)
+                },
+                "api_endpoint": UserAPIManager.create_user_api_endpoint(current_user.username)
+            }
         
     except Exception as e:
         logger.error(f"Failed to get user statistics: {e}")

@@ -15,7 +15,7 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 class DatabaseConnectionPool:
-    """Enterprise-grade SQLite connection pool with thread safety"""
+    """Professional SQLite connection pool with thread safety"""
     
     def __init__(self, database_path: str, pool_size: int = 20):
         self.database_path = database_path
@@ -106,7 +106,7 @@ class DatabaseConnectionPool:
                         pass
 
 class RedisConnectionPool:
-    """Enterprise-grade Redis connection pool"""
+    """Professional Redis connection pool"""
     
     def __init__(self):
         self.pool = redis.ConnectionPool.from_url(
@@ -134,7 +134,7 @@ class RedisConnectionPool:
             return False
 
 class DatabaseManager:
-    """Enterprise-grade database manager"""
+    """Professional database manager"""
     
     def __init__(self):
         self.db_path = settings.database_url_formatted.replace("sqlite:///", "")
@@ -150,7 +150,7 @@ class DatabaseManager:
         logger.info("Database manager initialized successfully")
     
     def init_database(self):
-        """Initialize SQLite database with enterprise-grade schema"""
+        """Initialize SQLite database with Professional schema"""
         try:
             with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
@@ -193,7 +193,7 @@ class DatabaseManager:
                         smtp_host VARCHAR(255) NOT NULL,
                         smtp_port INTEGER NOT NULL,
                         smtp_username VARCHAR(255) NOT NULL,
-                        smtp_password_encrypted TEXT NOT NULL,
+                        smtp_password TEXT NOT NULL,
                         use_tls BOOLEAN DEFAULT TRUE,
                         use_ssl BOOLEAN DEFAULT FALSE,
                         from_email VARCHAR(255) NOT NULL,
@@ -201,6 +201,9 @@ class DatabaseManager:
                         is_active BOOLEAN DEFAULT TRUE,
                         is_verified BOOLEAN DEFAULT FALSE,
                         last_used TIMESTAMP NULL,
+                        max_send_rate INTEGER DEFAULT 10,
+                        daily_limit INTEGER DEFAULT 1000,
+                        connection_timeout INTEGER DEFAULT 30,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -318,6 +321,36 @@ class DatabaseManager:
                     )
                 """)
                 
+                # User API keys table for additional API key management
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_api_keys (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        api_key VARCHAR(255) NOT NULL,
+                        api_key_hash VARCHAR(255) UNIQUE NOT NULL,
+                        key_name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        permissions JSON,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        last_used TIMESTAMP NULL,
+                        usage_count INTEGER DEFAULT 0,
+                        rate_limit INTEGER DEFAULT 1000,
+                        expires_at TIMESTAMP NULL,
+                        deleted_at TIMESTAMP NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Ensure deleted_at column exists for existing tables
+                try:
+                    cursor.execute("SELECT deleted_at FROM user_api_keys LIMIT 1")
+                except Exception:
+                    # Column doesn't exist, add it
+                    cursor.execute("ALTER TABLE user_api_keys ADD COLUMN deleted_at TIMESTAMP NULL")
+                    logger.info("Added missing deleted_at column to user_api_keys table")
+                
                 # System settings table
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS system_settings (
@@ -339,6 +372,11 @@ class DatabaseManager:
                     "CREATE INDEX IF NOT EXISTS idx_users_api_key_hash ON users(api_key_hash)",
                     "CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active)",
                     "CREATE INDEX IF NOT EXISTS idx_users_last_activity ON users(last_activity)",
+                    
+                    "CREATE INDEX IF NOT EXISTS idx_user_api_keys_user_id ON user_api_keys(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_api_keys_api_key_hash ON user_api_keys(api_key_hash)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_api_keys_active ON user_api_keys(is_active)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_api_keys_expires ON user_api_keys(expires_at)",
                     
                     "CREATE INDEX IF NOT EXISTS idx_smtp_user_id ON smtp_configs(user_id)",
                     "CREATE INDEX IF NOT EXISTS idx_smtp_active ON smtp_configs(is_active)",
@@ -376,12 +414,125 @@ class DatabaseManager:
                 for index_sql in indexes:
                     cursor.execute(index_sql)
                 
+                # Run database migrations for existing installations
+                self._run_migrations(conn)
+                
                 conn.commit()
                 logger.info("Database schema initialized successfully")
                 
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
             raise
+    
+    def _run_migrations(self, conn):
+        """Run database migrations for existing installations"""
+        try:
+            cursor = conn.cursor()
+            
+            # Check users table and add missing columns
+            cursor.execute("PRAGMA table_info(users)")
+            user_columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add missing columns to users table
+            missing_user_columns = [
+                ("verified_at", "TIMESTAMP NULL"),
+                ("suspended_at", "TIMESTAMP NULL"),
+                ("suspension_reason", "TEXT NULL"),
+                ("total_emails_sent", "INTEGER DEFAULT 0"),
+                ("emails_sent_today", "INTEGER DEFAULT 0"),
+                ("last_api_call", "TIMESTAMP NULL")
+            ]
+            
+            for column_name, column_def in missing_user_columns:
+                if column_name not in user_columns:
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_def}")
+                    logger.info(f"Added missing column {column_name} to users table")
+            
+            # Check if smtp_configs table exists and add missing columns
+            cursor.execute("PRAGMA table_info(smtp_configs)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add missing columns if they don't exist
+            missing_columns = [
+                ("max_send_rate", "INTEGER DEFAULT 10"),
+                ("daily_limit", "INTEGER DEFAULT 1000"),
+                ("connection_timeout", "INTEGER DEFAULT 30")
+            ]
+            
+            for column_name, column_def in missing_columns:
+                if column_name not in columns:
+                    cursor.execute(f"ALTER TABLE smtp_configs ADD COLUMN {column_name} {column_def}")
+                    logger.info(f"Added missing column {column_name} to smtp_configs table")
+            
+            # Fix smtp_password column name if needed (from smtp_password_encrypted to smtp_password)
+            if "smtp_password_encrypted" in columns and "smtp_password" not in columns:
+                # Create new table with correct column name
+                cursor.execute("""
+                    CREATE TABLE smtp_configs_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        name VARCHAR(255) DEFAULT 'Default',
+                        smtp_host VARCHAR(255) NOT NULL,
+                        smtp_port INTEGER NOT NULL,
+                        smtp_username VARCHAR(255) NOT NULL,
+                        smtp_password TEXT NOT NULL,
+                        use_tls BOOLEAN DEFAULT TRUE,
+                        use_ssl BOOLEAN DEFAULT FALSE,
+                        from_email VARCHAR(255) NOT NULL,
+                        from_name VARCHAR(255),
+                        is_active BOOLEAN DEFAULT TRUE,
+                        is_verified BOOLEAN DEFAULT FALSE,
+                        last_used TIMESTAMP NULL,
+                        max_send_rate INTEGER DEFAULT 10,
+                        daily_limit INTEGER DEFAULT 1000,
+                        connection_timeout INTEGER DEFAULT 30,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Copy data from old table
+                cursor.execute("""
+                    INSERT INTO smtp_configs_new 
+                    (id, user_id, name, smtp_host, smtp_port, smtp_username, smtp_password, 
+                     use_tls, use_ssl, from_email, from_name, is_active, is_verified, 
+                     last_used, created_at, updated_at)
+                    SELECT id, user_id, name, smtp_host, smtp_port, smtp_username, smtp_password_encrypted,
+                           use_tls, use_ssl, from_email, from_name, is_active, is_verified,
+                           last_used, created_at, updated_at
+                    FROM smtp_configs
+                """)
+                
+                # Drop old table and rename new one
+                cursor.execute("DROP TABLE smtp_configs")
+                cursor.execute("ALTER TABLE smtp_configs_new RENAME TO smtp_configs")
+                
+                logger.info("Migrated smtp_configs table to fix column names")
+            
+            # Check api_usage_logs table and add missing columns
+            cursor.execute("PRAGMA table_info(api_usage_logs)")
+            api_log_columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add missing columns to api_usage_logs table
+            missing_api_log_columns = [
+                ("username", "VARCHAR(255)"),
+                ("template_id", "VARCHAR(255)"),
+                ("request_id", "VARCHAR(255)"),
+                ("client_ip", "VARCHAR(45)"),
+                ("status_code", "INTEGER"),
+                ("response_message", "TEXT")
+            ]
+            
+            for column_name, column_def in missing_api_log_columns:
+                if column_name not in api_log_columns:
+                    cursor.execute(f"ALTER TABLE api_usage_logs ADD COLUMN {column_name} {column_def}")
+                    logger.info(f"Added missing column {column_name} to api_usage_logs table")
+            
+        except Exception as e:
+            logger.error(f"Migration failed: {e}")
+            # Don't raise exception to prevent startup failure
+            pass
     
     def _start_health_monitoring(self):
         """Start background health monitoring"""

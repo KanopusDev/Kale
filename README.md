@@ -6,7 +6,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 
-A professional, enterprise-grade email API service that allows users to send emails through their configured SMTP servers with comprehensive template management, API access, and advanced analytics.
+A professional email API service that allows users to send emails through their configured SMTP servers with comprehensive template management, API access, and advanced analytics.
 
 ## 🚀 Features
 
@@ -110,6 +110,11 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 - Dashboard: http://localhost:8000/dashboard
 - Admin Panel: http://localhost:8000/admin
 - API Documentation: http://localhost:8000/docs
+
+### Demo Credentials
+For testing purposes, you can use these demo credentials:
+- **Email**: demo@kanopus.org
+- **Password**: Demio@2025
 
 ## 🔧 Configuration
 

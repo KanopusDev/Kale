@@ -24,11 +24,15 @@ class TemplateService:
                     return None
                 
                 # Extract variables from content
-                variables = EmailService.extract_variables(template_data.html_content)
+                auto_variables = EmailService.extract_variables(template_data.html_content)
                 if template_data.text_content:
-                    variables.extend(EmailService.extract_variables(template_data.text_content))
-                variables.extend(EmailService.extract_variables(template_data.subject))
-                variables = list(set(variables))
+                    auto_variables.extend(EmailService.extract_variables(template_data.text_content))
+                auto_variables.extend(EmailService.extract_variables(template_data.subject))
+                
+                # Combine auto-extracted variables with user-specified variables
+                user_variables = template_data.variables or []
+                all_variables = list(set(auto_variables + user_variables))
+                variables = all_variables
                 
                 # Insert template
                 cursor.execute("""

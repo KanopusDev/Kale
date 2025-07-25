@@ -3,246 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Kale Email API</title>
+    <title>Dashboard - Kale Email API Platform</title>
+    <meta name="description" content="Monitor your email API usage and performance">
+    
+    <!-- Tailwind CSS with Custom Configuration -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#4f46e5',
+                            600: '#4338ca',
+                            700: '#3730a3',
+                            800: '#312e81',
+                            900: '#1e1b4b'
+                        },
+                        'secondary': {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            200: '#a5f3fc',
+                            300: '#67e8f9',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            700: '#0e7490',
+                            800: '#155e75',
+                            900: '#164e63'
+                        },
+                        'accent': {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f'
+                        }
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/css/main.css">
-    <style>
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-        .card-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-    </style>
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border: 1px solid rgba(79, 70, 229, 0.1);
+        }
+        
+        .nav-tab {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .nav-tab.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+            background: rgba(79, 70, 229, 0.05);
+        }
+        
+        .nav-tab:hover {
+            background: rgba(79, 70, 229, 0.05);
+            color: #4f46e5;
+        }
+        
+        .input-focus {
+            transition: all 0.3s ease;
+        }
+        
+        .input-focus:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(10px);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 min-h-screen">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg">
+    <nav class="bg-white shadow-lg border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-indigo-600">Kale</h1>
-                    <div class="hidden md:ml-6 md:flex md:space-x-8">
-                        <a href="/dashboard" class="text-indigo-600 border-b-2 border-indigo-600 px-3 py-2 text-sm font-medium">Dashboard</a>
-                        <a href="#templates" onclick="showTemplates()" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Templates</a>
-                        <a href="#smtp" onclick="showSMTP()" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">SMTP Config</a>
-                        <a href="#api-keys" onclick="showAPIKeys()" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">API Keys</a>
-                        <a href="/docs" class="text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Docs</a>
+                    <a href="/" class="text-2xl font-bold bg-gradient-to-r from-primary-500 to-secondary-500 bg-clip-text text-transparent">
+                        Kale
+                    </a>
+                    <div class="hidden md:ml-8 md:flex md:space-x-1">
+                        <a href="/" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Home</a>
+                        <a href="/dashboard" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-3 py-2 text-sm font-medium rounded-lg">Dashboard</a>
+                        <a href="/docs" target="_blank" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Docs</a>
+                        <a href="/support" class="text-gray-700 hover:text-primary-600 px-3 py-2 text-sm font-medium rounded-lg transition-colors">Support</a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <span id="user-info" class="text-gray-700 text-sm"></span>
-                    <button onclick="KaleAPI.logout()" class="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">Logout</button>
+                    <span id="user-info" class="text-gray-700 text-sm font-medium"></span>
+                    <div class="relative">
+                        <button id="user-menu-button" class="bg-primary-100 text-primary-700 p-2 rounded-lg hover:bg-primary-200 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </button>
+                        <div id="user-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                            <hr class="border-gray-200">
+                            <button data-action="logout" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg">Logout</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Dashboard Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Dashboard Stats -->
-        <div id="dashboard-view">
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-                <p class="text-gray-600">Monitor your email API usage and performance</p>
-            </div>
+        <!-- Dashboard Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p class="text-gray-600">Monitor your email API usage and performance</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="mb-8">
+            <nav class="flex space-x-1 bg-white rounded-lg p-1 shadow-lg">
+                <button data-tab="overview" class="nav-tab active px-4 py-2 text-sm font-medium rounded-lg">Overview</button>
+                <button data-tab="templates" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">Templates</button>
+                <button data-tab="smtp" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">SMTP Config</button>
+                <button data-tab="api-keys" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">API Keys</button>
+            </nav>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
 
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-blue-500 bg-opacity-75">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="metric-card p-6 rounded-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Total Emails</p>
+                            <p id="total-emails" class="text-2xl font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="bg-primary-100 p-3 rounded-lg">
+                            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                             </svg>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Total Emails</p>
-                            <p id="total-emails" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span id="emails-trend" class="text-sm font-medium text-emerald-600">-</span>
                     </div>
                 </div>
 
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-green-500 bg-opacity-75">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                <div class="metric-card p-6 rounded-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Delivery Rate</p>
+                            <p id="delivery-rate" class="text-2xl font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="bg-secondary-100 p-3 rounded-lg">
+                            <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Today</p>
-                            <p id="emails-today" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span id="delivery-trend" class="text-sm font-medium text-emerald-600">-</span>
                     </div>
                 </div>
 
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-purple-500 bg-opacity-75">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                <div class="metric-card p-6 rounded-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">API Calls</p>
+                            <p id="api-calls" class="text-2xl font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="bg-accent-100 p-3 rounded-lg">
+                            <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                             </svg>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">Templates</p>
-                            <p id="total-templates" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span id="api-trend" class="text-sm font-medium text-emerald-600">-</span>
                     </div>
                 </div>
 
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <div class="flex items-center">
-                        <div class="p-3 rounded-full bg-yellow-500 bg-opacity-75">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                <div class="metric-card p-6 rounded-xl card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm font-medium">Response Time</p>
+                            <p id="response-time" class="text-2xl font-bold text-gray-900">-</p>
+                        </div>
+                        <div class="bg-primary-100 p-3 rounded-lg">
+                            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-600">API Keys</p>
-                            <p id="api-keys-count" class="text-2xl font-semibold text-gray-900">0</p>
-                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <span id="response-trend" class="text-sm font-medium text-emerald-600">-</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Charts and Recent Activity -->
+            <!-- Charts and Activity -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="glass-card rounded-2xl p-6 card-hover">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Email Volume (Last 7 Days)</h3>
-                    <div class="h-64 relative">
-                        <canvas id="emailChart"></canvas>
-                    </div>
+                    <canvas id="emailChart" width="400" height="200"></canvas>
                 </div>
 
-                <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="glass-card rounded-2xl p-6 card-hover">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-                    <div id="recent-activity" class="space-y-3">
-                        <!-- Recent activity will be populated here -->
+                    <div id="recent-activity" class="space-y-4">
+                        <!-- Activity items will be populated here -->
                     </div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
+                <div class="glass-card rounded-2xl p-6 text-center card-hover">
+                    <div class="bg-primary-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Send Test Email</h3>
+                    <p class="text-gray-600 mb-4">Test your email configuration</p>
+                    <button data-action="send-test" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-2 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">Send Test</button>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6 text-center card-hover">
+                    <div class="bg-secondary-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
                     <h3 class="text-lg font-semibold text-gray-900 mb-2">Create Template</h3>
-                    <p class="text-gray-600 mb-4">Design a new email template with variables</p>
-                    <button onclick="showTemplates(); document.getElementById('create-template-btn').click();" 
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                        Create Template
-                    </button>
+                    <p class="text-gray-600 mb-4">Design a new email template</p>
+                    <button data-action="create-template" class="bg-gradient-to-r from-secondary-500 to-accent-500 text-white px-4 py-2 rounded-lg font-medium hover:from-secondary-600 hover:to-accent-600 transition-all">Create Template</button>
                 </div>
 
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Configure SMTP</h3>
-                    <p class="text-gray-600 mb-4">Set up your email server connection</p>
-                    <button onclick="showSMTP()" 
-                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                        Configure SMTP
-                    </button>
-                </div>
-
-                <div class="card-hover bg-white rounded-lg shadow-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">API Documentation</h3>
-                    <p class="text-gray-600 mb-4">Learn how to integrate with our API</p>
-                    <a href="/docs" 
-                       class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium inline-block">
-                        View Docs
-                    </a>
+                <div class="glass-card rounded-2xl p-6 text-center card-hover">
+                    <div class="bg-accent-100 w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Generate API Key</h3>
+                    <p class="text-gray-600 mb-4">Create a new API key</p>
+                    <button data-action="generate-api-key" class="bg-gradient-to-r from-accent-500 to-primary-500 text-white px-4 py-2 rounded-lg font-medium hover:from-accent-600 hover:to-primary-600 transition-all">Generate Key</button>
                 </div>
             </div>
         </div>
 
-        <!-- Templates View -->
-        <div id="templates-view" class="hidden">
+        <!-- Templates Tab -->
+        <div id="templates-tab" class="tab-content">
             <div class="flex justify-between items-center mb-8">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Email Templates</h1>
-                    <p class="text-gray-600">Create and manage your email templates</p>
+                    <h2 class="text-2xl font-bold text-gray-900">Email Templates</h2>
+                    <p class="text-gray-600">Manage your email templates</p>
                 </div>
-                <button id="create-template-btn" onclick="showCreateTemplate()" 
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium">
+                <button data-action="create-template" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-2 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
                     Create Template
                 </button>
             </div>
 
-            <div id="templates-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="templates-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Templates will be populated here -->
             </div>
         </div>
 
-        <!-- SMTP Configuration View -->
-        <div id="smtp-view" class="hidden">
+        <!-- SMTP Config Tab -->
+        <div id="smtp-tab" class="tab-content">
             <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">SMTP Configuration</h1>
+                <h2 class="text-2xl font-bold text-gray-900">SMTP Configuration</h2>
                 <p class="text-gray-600">Configure your email server settings</p>
             </div>
 
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <form id="smtp-form" onsubmit="saveSMTPConfig(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-8">
+                <form id="smtp-form" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="smtp-host">
-                                SMTP Host
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="smtp-host" type="text" placeholder="smtp.gmail.com" required>
+                            <label for="smtp-host" class="block text-sm font-medium text-gray-700 mb-2">SMTP Host</label>
+                            <input type="text" id="smtp-host" name="host" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="smtp.gmail.com">
                         </div>
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="smtp-port">
-                                SMTP Port
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="smtp-port" type="number" placeholder="587" required>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="smtp-username">
-                                Username
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="smtp-username" type="text" required>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="smtp-password">
-                                Password
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="smtp-password" type="password" required>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="from-email">
-                                From Email
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="from-email" type="email" required>
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="from-name">
-                                From Name (Optional)
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="from-name" type="text">
-                        </div>
-                        <div class="flex items-center">
-                            <input id="use-tls" type="checkbox" checked 
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="use-tls" class="ml-2 block text-sm text-gray-900">
-                                Use TLS/SSL
-                            </label>
+                            <label for="smtp-port" class="block text-sm font-medium text-gray-700 mb-2">Port</label>
+                            <input type="number" id="smtp-port" name="port" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="587">
                         </div>
                     </div>
-                    <div class="mt-6 flex space-x-4">
-                        <button type="submit" 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium">
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="smtp-username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <input type="text" id="smtp-username" name="username" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="your-email@gmail.com">
+                        </div>
+                        <div>
+                            <label for="smtp-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="smtp-password" name="password" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="Your app password">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="from-email" class="block text-sm font-medium text-gray-700 mb-2">From Email</label>
+                            <input type="email" id="from-email" name="from_email" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="noreply@yourcompany.com">
+                        </div>
+                        <div>
+                            <label for="from-name" class="block text-sm font-medium text-gray-700 mb-2">From Name</label>
+                            <input type="text" id="from-name" name="from_name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="Your Company">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="use-tls" name="use_tls" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            <span class="ml-2 text-sm text-gray-700">Use TLS</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="use-ssl" name="use_ssl" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                            <span class="ml-2 text-sm text-gray-700">Use SSL</span>
+                        </label>
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button type="submit" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
                             Save Configuration
                         </button>
-                        <button type="button" onclick="testSMTPConfig()" 
-                                class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
+                        <button type="button" data-action="test-smtp" class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all">
                             Test Connection
                         </button>
                     </div>
@@ -250,97 +406,352 @@
             </div>
         </div>
 
-        <!-- API Keys View -->
-        <div id="api-keys-view" class="hidden">
-            <div class="flex justify-between items-center mb-8">
+        <!-- API Keys Tab -->
+        <div id="api-keys-tab" class="tab-content">
+            <!-- Header Section -->
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 space-y-4 lg:space-y-0">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">API Keys</h1>
-                    <p class="text-gray-600">Manage your API access keys</p>
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">API Management</h2>
+                    <p class="text-gray-600">Manage your API keys, endpoints, and test your integrations</p>
                 </div>
-                <button onclick="createAPIKey()" 
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium">
-                    Create API Key
-                </button>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button data-action="generate-api-key" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-primary-600 hover:to-secondary-600 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                        Generate API Key
+                    </button>
+                    <button data-action="show-api-docs" class="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:border-primary-500 hover:text-primary-600 transition-all">
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        API Docs
+                    </button>
+                </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Your API Endpoint</h3>
-                <div class="bg-gray-100 rounded-lg p-4">
-                    <code id="api-endpoint" class="text-sm text-gray-800"></code>
+            <!-- API Endpoint & Testing Section -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                <!-- API Endpoint Information -->
+                <div class="glass-card rounded-2xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <svg class="w-6 h-6 text-primary-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                            API Endpoint
+                        </h3>
+                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">Live</span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Your API Endpoint</label>
+                            <div class="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="font-mono text-sm">
+                                    <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold mr-2">POST</span>
+                                    <span id="api-endpoint" class="text-gray-900">http://localhost:8000/pradyumntandon/{template_id}</span>
+                                </div>
+                                <button data-action="copy-api-endpoint" class="absolute right-3 top-3 p-2 text-gray-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-gray-500 text-sm mt-2">Replace {template_id} with your actual template ID</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Example Request</label>
+                            <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                                <pre class="text-green-400 text-sm"><code id="curl-example">curl -X POST "http://localhost:8000/pradyumntandon/welcome-email" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "recipients": ["user@example.com"],
+    "variables": {
+      "name": "John Doe",
+      "company": "Example Inc"
+    }
+  }'</code></pre>
+                                <button data-action="copy-curl-example" class="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                                    📋 Copy cURL Example
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <p class="text-gray-600 text-sm mt-2">Use this endpoint to send emails via our API</p>
+
+                <!-- API Testing Section -->
+                <div class="glass-card rounded-2xl p-6 border border-gray-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                            <svg class="w-6 h-6 text-accent-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            API Tester
+                        </h3>
+                        <span class="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">Beta</span>
+                    </div>
+
+                    <form id="api-test-form" class="space-y-4">
+                        <div>
+                            <label for="test-template-id" class="block text-sm font-medium text-gray-700 mb-2">Template ID</label>
+                            <div class="relative">
+                                <select id="test-template-id" name="template_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus pr-10">
+                                    <option value="">Select a template</option>
+                                    <!-- Templates will be populated dynamically -->
+                                </select>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="test-recipients" class="block text-sm font-medium text-gray-700 mb-2">Test Recipients</label>
+                            <textarea id="test-recipients" name="recipients" required 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus h-24 resize-none"
+                                    placeholder="user@example.com&#10;another@example.com"></textarea>
+                            <p class="text-gray-500 text-xs mt-1">Enter one email per line</p>
+                        </div>
+
+                        <div>
+                            <label for="test-variables" class="block text-sm font-medium text-gray-700 mb-2">Template Variables (JSON)</label>
+                            <textarea id="test-variables" name="variables" 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus h-32 font-mono text-sm resize-none"
+                                    placeholder='{\n  "name": "John Doe",\n  "company": "Example Inc",\n  "date": "2025-01-15"\n}'></textarea>
+                            <p class="text-gray-500 text-xs mt-1">Valid JSON format required</p>
+                        </div>
+
+                        <div class="flex space-x-3 pt-2">
+                            <button type="submit" class="flex-1 bg-gradient-to-r from-accent-500 to-accent-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-accent-600 hover:to-accent-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                Send Test Email
+                            </button>
+                            <button type="button" data-action="validate-api-test" class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:border-primary-500 hover:text-primary-600 transition-all">
+                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Validate
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Test Results Section -->
+                    <div id="api-test-results" class="mt-6 hidden">
+                        <div class="border-t border-gray-200 pt-4">
+                            <h4 class="text-sm font-semibold text-gray-900 mb-3">Test Results</h4>
+                            <div id="test-response" class="bg-gray-50 rounded-lg p-4 font-mono text-sm"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div id="api-keys-list" class="space-y-4">
-                <!-- API keys will be populated here -->
+            <!-- API Keys List Section -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-semibold text-gray-900">API Keys</h3>
+                    <div class="flex items-center space-x-3 text-sm text-gray-500">
+                        <span>🔒 Secured with enterprise-grade encryption</span>
+                    </div>
+                </div>
+                
+                <div id="api-keys-list" class="space-y-4">
+                    <!-- API keys will be populated here -->
+                </div>
+            </div>
+
+            <!-- Usage Analytics Section -->
+            <div class="glass-card rounded-2xl p-6 border border-gray-200 shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900 flex items-center">
+                        <svg class="w-6 h-6 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        API Usage Analytics
+                    </h3>
+                    <select id="analytics-period" class="px-3 py-2 border border-gray-300 rounded-lg text-sm input-focus">
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-blue-600 text-sm font-medium">Total Requests</p>
+                                <p id="total-requests" class="text-2xl font-bold text-blue-900">0</p>
+                            </div>
+                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-green-600 text-sm font-medium">Success Rate</p>
+                                <p id="success-rate" class="text-2xl font-bold text-green-900">0%</p>
+                            </div>
+                            <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-orange-600 text-sm font-medium">Avg Response</p>
+                                <p id="avg-response-time" class="text-2xl font-bold text-orange-900">0ms</p>
+                            </div>
+                            <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-purple-600 text-sm font-medium">Rate Limit</p>
+                                <p id="rate-limit-status" class="text-2xl font-bold text-purple-900">Good</p>
+                            </div>
+                            <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button data-action="refresh-analytics" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Refresh Data
+                        </button>
+                        <button data-action="export-logs" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Export Logs
+                        </button>
+                        <button data-action="view-documentation" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            View Docs
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Modals -->
     <!-- Create Template Modal -->
-    <div id="template-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div id="create-template-modal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl max-w-4xl w-full p-8 max-h-screen overflow-y-auto">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">Create Email Template</h2>
-                <form id="template-form" onsubmit="saveTemplate(event)">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-2xl max-w-4xl w-full p-8 max-h-screen overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900">Create New Template</h3>
+                    <button data-action="close-modal" data-modal="create-template-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="create-template-form" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="template-id">
-                                Template ID
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="template-id" type="text" placeholder="welcome-email" required>
+                            <label for="template-name" class="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
+                            <input type="text" id="template-name" name="name" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="Welcome Email">
                         </div>
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="template-name">
-                                Template Name
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="template-name" type="text" placeholder="Welcome Email" required>
+                            <label for="template-slug" class="block text-sm font-medium text-gray-700 mb-2">Template ID</label>
+                            <input type="text" id="template-slug" name="template_id" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="welcome-email">
                         </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="template-category">
-                                Category
-                            </label>
-                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                    id="template-category">
+                            <label for="template-category" class="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select id="template-category" name="category" 
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus">
+                                <option value="">Select category</option>
                                 <option value="marketing">Marketing</option>
                                 <option value="transactional">Transactional</option>
                                 <option value="notification">Notification</option>
-                                <option value="welcome">Welcome</option>
-                                <option value="other">Other</option>
+                                <option value="general">General</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="template-subject">
-                                Subject Line
-                            </label>
-                            <input class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                   id="template-subject" type="text" placeholder="Welcome to {{company}}!" required>
+                            <label for="template-description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <input type="text" id="template-description" name="description" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                                   placeholder="Brief description of the template">
                         </div>
                     </div>
-                    <div class="mb-6">
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="template-description">
-                            Description
-                        </label>
-                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                  id="template-description" rows="2" placeholder="Brief description of this template"></textarea>
+
+                    <div>
+                        <label for="template-subject" class="block text-sm font-medium text-gray-700 mb-2">Subject Line</label>
+                        <input type="text" id="template-subject" name="subject" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                               placeholder="Welcome to {{company_name}}!">
                     </div>
-                    <div class="mb-6">
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="template-html">
-                            HTML Content
-                        </label>
-                        <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500" 
-                                  id="template-html" rows="10" placeholder="<h1>Welcome {{name}}!</h1>" required></textarea>
+
+                    <div>
+                        <label for="template-html" class="block text-sm font-medium text-gray-700 mb-2">HTML Content</label>
+                        <textarea id="template-html" name="html_content" rows="8" required 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus font-mono text-sm"
+                                  placeholder="<h1>Welcome {{name}}!</h1><p>Thank you for joining {{company_name}}.</p>"></textarea>
                     </div>
-                    <div class="flex justify-end space-x-4">
-                        <button type="button" onclick="hideCreateTemplate()" 
-                                class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                            Cancel
-                        </button>
-                        <button type="submit" 
-                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium">
+
+                    <div>
+                        <label for="template-text" class="block text-sm font-medium text-gray-700 mb-2">Text Content (Optional)</label>
+                        <textarea id="template-text" name="text_content" rows="6" 
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus font-mono text-sm"
+                                  placeholder="Welcome {{name}}! Thank you for joining {{company_name}}."></textarea>
+                    </div>
+
+                    <div>
+                        <label for="template-variables" class="block text-sm font-medium text-gray-700 mb-2">Template Variables (comma-separated)</label>
+                        <input type="text" id="template-variables" name="variables" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                               placeholder="name, company_name, email">
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button type="submit" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
                             Create Template
+                        </button>
+                        <button type="button" data-action="close-modal" data-modal="create-template-modal" class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all">
+                            Cancel
                         </button>
                     </div>
                 </form>
@@ -348,6 +759,49 @@
         </div>
     </div>
 
+    <!-- Send Test Email Modal -->
+    <div id="send-test-modal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl max-w-md w-full p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-900">Send Test Email</h2>
+                    <button data-action="close-modal" data-modal="send-test-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="send-test-form" class="space-y-4">
+                    <div>
+                        <label for="test-email" class="block text-sm font-medium text-gray-700 mb-2">To Email</label>
+                        <input type="email" id="test-email" name="to_email" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                               placeholder="test@example.com">
+                    </div>
+
+                    <div>
+                        <label for="test-subject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                        <input type="text" id="test-subject" name="subject" required 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
+                               placeholder="Test Email from Kale">
+                    </div>
+
+                    <div class="flex space-x-4">
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
+                            Send Test
+                        </button>
+                        <button type="button" data-action="close-modal" data-modal="send-test-modal" class="flex-1 bg-gray-200 text-gray-800 px-4 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- External JavaScript -->
     <script src="/static/js/main.js"></script>
     <script src="/static/js/dashboard.js"></script>
 </body>
