@@ -94,19 +94,23 @@
         }
         
         .nav-tab {
-            transition: all 0.3s ease;
-            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            color: #6b7280;
+            background: transparent;
         }
         
         .nav-tab.active {
             color: #4f46e5;
-            border-bottom-color: #4f46e5;
-            background: rgba(79, 70, 229, 0.05);
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+            border-color: rgba(79, 70, 229, 0.2);
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.1);
         }
         
         .nav-tab:hover {
             background: rgba(79, 70, 229, 0.05);
             color: #4f46e5;
+            border-color: rgba(79, 70, 229, 0.1);
         }
         
         .input-focus {
@@ -175,11 +179,32 @@
 
         <!-- Tab Navigation -->
         <div class="mb-8">
-            <nav class="flex space-x-1 bg-white rounded-lg p-1 shadow-lg">
-                <button data-tab="overview" class="nav-tab active px-4 py-2 text-sm font-medium rounded-lg">Overview</button>
-                <button data-tab="templates" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">Templates</button>
-                <button data-tab="smtp" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">SMTP Config</button>
-                <button data-tab="api-keys" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg">API Keys</button>
+            <nav class="flex space-x-1 bg-white rounded-2xl p-1 shadow-xl border border-gray-100">
+                <button data-tab="overview" class="nav-tab active px-6 py-4 text-sm font-bold rounded-xl transition-all duration-300 flex items-center space-x-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z"></path>
+                    </svg>
+                    <span>Overview</span>
+                </button>
+                <button data-tab="templates" class="nav-tab px-6 py-4 text-sm font-bold rounded-xl transition-all duration-300 flex items-center space-x-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span>Templates</span>
+                </button>
+                <button data-tab="smtp" class="nav-tab px-6 py-4 text-sm font-bold rounded-xl transition-all duration-300 flex items-center space-x-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>SMTP Config</span>
+                </button>
+                <button data-tab="api-keys" class="nav-tab px-6 py-4 text-sm font-bold rounded-xl transition-all duration-300 flex items-center space-x-2 hover:bg-gradient-to-r hover:from-primary-50 hover:to-secondary-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                    </svg>
+                    <span>API Keys</span>
+                </button>
             </nav>
         </div>
 
@@ -412,7 +437,7 @@
             <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 space-y-4 lg:space-y-0">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-900 mb-2">API Management</h2>
-                    <p class="text-gray-600">Manage your API keys, endpoints, and test your integrations</p>
+                    <p class="text-gray-600">Manage your API keys and access your live endpoint</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <button data-action="generate-api-key" class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-primary-600 hover:to-secondary-600 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
@@ -420,12 +445,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                         </svg>
                         Generate API Key
-                    </button>
-                    <button data-action="show-api-docs" class="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:border-primary-500 hover:text-primary-600 transition-all">
-                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        API Docs
                     </button>
                 </div>
             </div>
@@ -450,7 +469,7 @@
                             <div class="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div class="font-mono text-sm">
                                     <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold mr-2">POST</span>
-                                    <span id="api-endpoint" class="text-gray-900">http://localhost:8000/pradyumntandon/{template_id}</span>
+                                    <span id="api-endpoint" class="text-gray-900">https://kale.kanopus.org/pradyumntandon/{template_id}</span>
                                 </div>
                                 <button data-action="copy-api-endpoint" class="absolute right-3 top-3 p-2 text-gray-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -464,7 +483,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Example Request</label>
                             <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                                <pre class="text-green-400 text-sm"><code id="curl-example">curl -X POST "http://localhost:8000/pradyumntandon/welcome-email" \
+                                <pre class="text-green-400 text-sm"><code id="curl-example">curl -X POST "https://kale.kanopus.org/pradyumntandon/welcome-email" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
@@ -482,82 +501,12 @@
                     </div>
                 </div>
 
-                <!-- API Testing Section -->
-                <div class="glass-card rounded-2xl p-6 border border-gray-200 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                            <svg class="w-6 h-6 text-accent-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                            </svg>
-                            API Tester
-                        </h3>
-                        <span class="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">Beta</span>
-                    </div>
-
-                    <form id="api-test-form" class="space-y-4">
-                        <div>
-                            <label for="test-template-id" class="block text-sm font-medium text-gray-700 mb-2">Template ID</label>
-                            <div class="relative">
-                                <select id="test-template-id" name="template_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus pr-10">
-                                    <option value="">Select a template</option>
-                                    <!-- Templates will be populated dynamically -->
-                                </select>
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="test-recipients" class="block text-sm font-medium text-gray-700 mb-2">Test Recipients</label>
-                            <textarea id="test-recipients" name="recipients" required 
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus h-24 resize-none"
-                                    placeholder="user@example.com&#10;another@example.com"></textarea>
-                            <p class="text-gray-500 text-xs mt-1">Enter one email per line</p>
-                        </div>
-
-                        <div>
-                            <label for="test-variables" class="block text-sm font-medium text-gray-700 mb-2">Template Variables (JSON)</label>
-                            <textarea id="test-variables" name="variables" 
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus h-32 font-mono text-sm resize-none"
-                                    placeholder='{\n  "name": "John Doe",\n  "company": "Example Inc",\n  "date": "2025-01-15"\n}'></textarea>
-                            <p class="text-gray-500 text-xs mt-1">Valid JSON format required</p>
-                        </div>
-
-                        <div class="flex space-x-3 pt-2">
-                            <button type="submit" class="flex-1 bg-gradient-to-r from-accent-500 to-accent-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-accent-600 hover:to-accent-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                </svg>
-                                Send Test Email
-                            </button>
-                            <button type="button" data-action="validate-api-test" class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:border-primary-500 hover:text-primary-600 transition-all">
-                                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Validate
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Test Results Section -->
-                    <div id="api-test-results" class="mt-6 hidden">
-                        <div class="border-t border-gray-200 pt-4">
-                            <h4 class="text-sm font-semibold text-gray-900 mb-3">Test Results</h4>
-                            <div id="test-response" class="bg-gray-50 rounded-lg p-4 font-mono text-sm"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- API Keys List Section -->
-            <div class="mb-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-2xl font-semibold text-gray-900">API Keys</h3>
+            <!-- API Keys Management Section -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-semibold text-gray-900">API Keys Management</h3>
                     <div class="flex items-center space-x-3 text-sm text-gray-500">
-                        <span>🔒 Secured with enterprise-grade encryption</span>
+                        <span>🔒 Enterprise-grade security</span>
                     </div>
                 </div>
                 
@@ -565,110 +514,9 @@
                     <!-- API keys will be populated here -->
                 </div>
             </div>
-
-            <!-- Usage Analytics Section -->
-            <div class="glass-card rounded-2xl p-6 border border-gray-200 shadow-sm">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-semibold text-gray-900 flex items-center">
-                        <svg class="w-6 h-6 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        API Usage Analytics
-                    </h3>
-                    <select id="analytics-period" class="px-3 py-2 border border-gray-300 rounded-lg text-sm input-focus">
-                        <option value="7d">Last 7 days</option>
-                        <option value="30d">Last 30 days</option>
-                        <option value="90d">Last 90 days</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-blue-600 text-sm font-medium">Total Requests</p>
-                                <p id="total-requests" class="text-2xl font-bold text-blue-900">0</p>
-                            </div>
-                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-green-600 text-sm font-medium">Success Rate</p>
-                                <p id="success-rate" class="text-2xl font-bold text-green-900">0%</p>
-                            </div>
-                            <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-orange-600 text-sm font-medium">Avg Response</p>
-                                <p id="avg-response-time" class="text-2xl font-bold text-orange-900">0ms</p>
-                            </div>
-                            <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-purple-600 text-sm font-medium">Rate Limit</p>
-                                <p id="rate-limit-status" class="text-2xl font-bold text-purple-900">Good</p>
-                            </div>
-                            <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="border-t border-gray-200 pt-6">
-                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button data-action="refresh-analytics" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            Refresh Data
-                        </button>
-                        <button data-action="export-logs" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            Export Logs
-                        </button>
-                        <button data-action="view-documentation" class="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:text-primary-600 transition-all">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            View Docs
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- Modals -->
     <!-- Create Template Modal -->
     <div id="create-template-modal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">

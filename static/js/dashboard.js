@@ -92,33 +92,6 @@ function setupEventListeners() {
             case 'copy-api-key':
                 copyAPIKey(target.dataset.key);
                 break;
-            case 'regenerate-api-key':
-                regenerateAPIKey(target.dataset.keyId);
-                break;
-            case 'toggle-api-key-status':
-                toggleAPIKeyStatus(target.dataset.keyId, target.dataset.currentStatus === 'true');
-                break;
-            case 'copy-api-endpoint':
-                copyApiEndpoint();
-                break;
-            case 'copy-curl-example':
-                copyCurlExample();
-                break;
-            case 'validate-api-test':
-                validateAPITest();
-                break;
-            case 'refresh-analytics':
-                refreshAnalytics();
-                break;
-            case 'export-logs':
-                exportLogs();
-                break;
-            case 'view-documentation':
-                viewDocumentation();
-                break;
-            case 'show-api-docs':
-                viewDocumentation();
-                break;
             case 'test-smtp':
                 testSMTPConfig();
                 break;
@@ -851,13 +824,9 @@ async function loadAPIKeys() {
         
         apiKeysData = apiKeys;
         displayAPIKeys(apiKeys);
-        updateAPIEndpoint();
-        loadAPIAnalytics();
-        initializeAPITesting();
     } catch (error) {
         // Show empty state on error instead of breaking the UI
         displayAPIKeys([]);
-        updateAPIEndpoint();
         KaleAPI.handleApiError(error, 'Failed to load API keys');
     }
 }
@@ -898,26 +867,16 @@ function displayAPIKeys(apiKeys) {
         const createdDate = new Date(apiKey.created_at).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            day: 'numeric'
         });
-
-        const lastUsedDate = apiKey.last_used ? 
-            new Date(apiKey.last_used).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            }) : 'Never';
 
         const statusColor = apiKey.is_active !== false ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
         const statusText = apiKey.is_active !== false ? 'Active' : 'Disabled';
-        const isActive = apiKey.is_active !== false;
 
         const maskedKey = `kale_${apiKey.id}_${'*'.repeat(24)}${(apiKey.key || '').substring(-4)}`;
 
         return `
-            <div class="glass-card rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+            <div class="glass-card rounded-xl p-6 border border-gray-200 shadow-sm">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between">
                     <!-- Key Info Section -->
                     <div class="flex-1 mb-4 lg:mb-0">
@@ -935,7 +894,7 @@ function displayAPIKeys(apiKeys) {
                         </div>
 
                         <!-- Key Display -->
-                        <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1">
                                     <label class="block text-xs font-medium text-gray-700 mb-1">API Key</label>
@@ -962,42 +921,10 @@ function displayAPIKeys(apiKeys) {
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Stats Grid -->
-                        <div class="grid grid-cols-3 gap-4 text-center">
-                            <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                                <div class="text-2xl font-bold text-blue-900">${KaleAPI.formatNumber(apiKey.usage_count || 0)}</div>
-                                <div class="text-xs text-blue-600 font-medium">Total Calls</div>
-                            </div>
-                            <div class="bg-green-50 rounded-lg p-3 border border-green-100">
-                                <div class="text-sm font-bold text-green-900">${lastUsedDate}</div>
-                                <div class="text-xs text-green-600 font-medium">Last Used</div>
-                            </div>
-                            <div class="bg-purple-50 rounded-lg p-3 border border-purple-100">
-                                <div class="text-lg font-bold text-purple-900">${apiKey.rate_limit || '1000'}/hr</div>
-                                <div class="text-xs text-purple-600 font-medium">Rate Limit</div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Actions Section -->
-                    <div class="lg:ml-6 flex flex-col space-y-3 lg:w-40">
-                        <button data-action="regenerate-api-key" data-key-id="${apiKey.id}" 
-                                class="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all">
-                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            Regenerate
-                        </button>
-                        
-                        <button data-action="toggle-api-key-status" data-key-id="${apiKey.id}" data-current-status="${isActive}"
-                                class="w-full px-4 py-2 ${isActive ? 'bg-gray-600 hover:bg-gray-700' : 'bg-green-600 hover:bg-green-700'} text-white text-sm font-medium rounded-lg transition-all">
-                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isActive ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}"></path>
-                            </svg>
-                            ${isActive ? 'Disable' : 'Enable'}
-                        </button>
-                        
+                    <div class="lg:ml-6 flex flex-col space-y-3 lg:w-32">
                         <button data-action="delete-api-key" data-key-id="${apiKey.id}" 
                                 class="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-all">
                             <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1174,343 +1101,20 @@ function copyAPIKey(key) {
     });
 }
 
-// API Testing Functions
-function initializeAPITesting() {
-    loadTemplatesForTesting();
-    setupAPITestForm();
-}
-
-async function loadTemplatesForTesting() {
-    try {
-        const response = await KaleAPI.apiRequest('/templates');
-        const select = document.getElementById('test-template-id');
-        if (!select || !response) return;
-
-        select.innerHTML = '<option value="">Select a template</option>';
-        
-        if (response.templates && response.templates.length > 0) {
-            response.templates.forEach(template => {
-                const option = document.createElement('option');
-                option.value = template.template_id || template.id;  
-                option.textContent = `${template.name} (ID: ${template.template_id || template.id})`;
-                select.appendChild(option);
-            });
-        } else {
-            select.innerHTML = '<option value="">No templates available</option>';
-        }
-    } catch (error) {
-        console.error('Error loading templates:', error);
-        const select = document.getElementById('test-template-id');
-        if (select) {
-            select.innerHTML = '<option value="">Error loading templates</option>';
-        }
-    }
-}
-
-function setupAPITestForm() {
-    const form = document.getElementById('api-test-form');
-    if (!form) return;
-
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendTestEmail();
-    });
-
-    // Auto-format JSON in variables textarea
-    const variablesTextarea = document.getElementById('test-variables');
-    if (variablesTextarea) {
-        variablesTextarea.addEventListener('blur', () => {
-            try {
-                const value = variablesTextarea.value.trim();
-                if (value) {
-                    const parsed = JSON.parse(value);
-                    variablesTextarea.value = JSON.stringify(parsed, null, 2);
-                }
-            } catch (e) {
-                // Invalid JSON, leave as is
-            }
-        });
-    }
-}
-
-function validateAPITest() {
-    const templateId = document.getElementById('test-template-id').value;
-    const recipients = document.getElementById('test-recipients').value.trim();
-    const variables = document.getElementById('test-variables').value.trim();
-
-    const errors = [];
-
-    if (!templateId) {
-        errors.push('Please select a template');
-    }
-
-    if (!recipients) {
-        errors.push('Please enter at least one recipient email');
-    } else {
-        const emailList = recipients.split('\n').map(email => email.trim()).filter(email => email);
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
-        emailList.forEach(email => {
-            if (!emailRegex.test(email)) {
-                errors.push(`Invalid email format: ${email}`);
-            }
-        });
-    }
-
-    if (variables) {
-        try {
-            JSON.parse(variables);
-        } catch (e) {
-            errors.push('Template variables must be valid JSON');
-        }
-    }
-
-    if (errors.length > 0) {
-        KaleAPI.showNotification(errors.join('<br>'), 'error');
-        return false;
-    }
-
-    KaleAPI.showNotification('Validation passed! Ready to send test email.', 'success');
-    return true;
-}
-
-async function sendTestEmail() {
-    if (!validateAPITest()) {
-        return;
-    }
-
-    const templateId = document.getElementById('test-template-id').value;
-    const recipients = document.getElementById('test-recipients').value.trim()
-        .split('\n')
-        .map(email => email.trim())
-        .filter(email => email);
-    const variablesText = document.getElementById('test-variables').value.trim();
-    
-    let variables = {};
-    if (variablesText) {
-        try {
-            variables = JSON.parse(variablesText);
-        } catch (e) {
-            KaleAPI.showNotification('Invalid JSON format in template variables', 'error');
-            return;
-        }
-    }
-
-    const payload = {
-        recipients: recipients,
-        variables: variables
-    };
-
-    // Show loading state
-    const submitButton = document.querySelector('#api-test-form button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    submitButton.innerHTML = `
-        <svg class="w-5 h-5 inline mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-        </svg>
-        Sending...
-    `;
-    submitButton.disabled = true;
-
-    try {
-        // Get current user info for endpoint
-        const userInfo = KaleAPI.getFromStorage('user');
-        const user = typeof userInfo === 'string' ? JSON.parse(userInfo) : userInfo;
-        const endpoint = `http://localhost:8000/${user.username}/${templateId}`;
-        
-        // Get first active API key for testing
-        const activeKey = apiKeysData.find(key => key.is_active !== false);
-        if (!activeKey) {
-            throw new Error('No active API key found. Please generate an API key first.');
-        }
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${activeKey.key}`
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            displayTestResults(data, true);
-            KaleAPI.showNotification('Test email sent successfully!', 'success');
-        } else {
-            displayTestResults(data, false);
-            KaleAPI.showNotification('Failed to send test email', 'error');
-        }
-    } catch (error) {
-        console.error('Error sending test email:', error);
-        displayTestResults({
-            error: error.message,
-            status: 'failed',
-            timestamp: new Date().toISOString()
-        }, false);
-        KaleAPI.showNotification('Failed to send test email', 'error');
-    } finally {
-        // Restore button state
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-    }
-}
-
-function displayTestResults(data, success) {
-    const resultsContainer = document.getElementById('api-test-results');
-    const responseContainer = document.getElementById('test-response');
-    
-    if (!resultsContainer || !responseContainer) return;
-
-    resultsContainer.classList.remove('hidden');
-    
-    const statusClass = success ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
-    const statusIcon = success ? 
-        '<svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>' :
-        '<svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.866-.833-2.464 0L3.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path></svg>';
-
-    responseContainer.innerHTML = `
-        <div class="border-l-4 ${success ? 'border-green-500' : 'border-red-500'} pl-4 mb-4">
-            <div class="flex items-center mb-2">
-                <span class="${statusClass} px-3 py-1 rounded-full text-sm font-medium">
-                    ${statusIcon}
-                    ${success ? 'Success' : 'Failed'}
-                </span>
-                <span class="ml-3 text-sm text-gray-500">${new Date().toLocaleString()}</span>
-            </div>
-        </div>
-        <pre class="whitespace-pre-wrap text-sm">${JSON.stringify(data, null, 2)}</pre>
-    `;
-}
-
-// API Analytics Functions
-function loadAPIAnalytics() {
-    const period = document.getElementById('analytics-period')?.value || '7d';
-    
-    // Simulate analytics data - replace with actual API call when available
-    const analyticsData = {
-        total_requests: Math.floor(Math.random() * 10000),
-        success_rate: (95 + Math.random() * 5).toFixed(1),
-        avg_response_time: Math.floor(150 + Math.random() * 100),
-        rate_limit_status: 'Good'
-    };
-
-    displayAPIAnalytics(analyticsData);
-}
-
-function displayAPIAnalytics(data) {
-    const elements = {
-        'total-requests': data.total_requests.toLocaleString(),
-        'success-rate': `${data.success_rate}%`,
-        'avg-response-time': `${data.avg_response_time}ms`,
-        'rate-limit-status': data.rate_limit_status
-    };
-
-    Object.entries(elements).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    });
-}
-
-function refreshAnalytics() {
-    KaleAPI.showNotification('Refreshing analytics data...', 'info');
-    loadAPIAnalytics();
-    setTimeout(() => {
-        KaleAPI.showNotification('Analytics data refreshed!', 'success');
-    }, 1000);
-}
-
-function exportLogs() {
-    KaleAPI.showNotification('Preparing logs export...', 'info');
-    // Simulate export functionality
-    setTimeout(() => {
-        KaleAPI.showNotification('Logs exported successfully!', 'success');
-    }, 2000);
-}
-
-function viewDocumentation() {
-    window.open('/docs', '_blank');
-}
-
+// Live API endpoint utilities
 function updateAPIEndpoint() {
-    const userInfo = KaleAPI.getFromStorage('user');
-    if (!userInfo) return;
-    
-    const user = typeof userInfo === 'string' ? JSON.parse(userInfo) : userInfo;
-    const apiEndpoint = document.getElementById('api-endpoint');
-    if (apiEndpoint) {
-        apiEndpoint.textContent = `http://localhost:8000/${user.username}/{template_id}`;
+    const endpoint = document.getElementById('api-endpoint');
+    if (endpoint) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const baseUrl = KaleAPI.getCurrentDomain();
+        endpoint.textContent = `${baseUrl}/${user.username || 'your-username'}/{template_id}`;
     }
 }
 
 function copyApiEndpoint() {
-    const apiEndpoint = document.getElementById('api-endpoint');
-    if (apiEndpoint) {
-        navigator.clipboard.writeText(apiEndpoint.textContent).then(() => {
-            KaleAPI.showNotification('API endpoint copied to clipboard!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy endpoint:', err);
-            KaleAPI.showNotification('Failed to copy endpoint to clipboard', 'error');
-        });
-    }
-}
-
-function copyCurlExample() {
-    const curlExample = document.getElementById('curl-example');
-    if (curlExample) {
-        navigator.clipboard.writeText(curlExample.textContent).then(() => {
-            KaleAPI.showNotification('cURL example copied to clipboard!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy cURL example:', err);
-            KaleAPI.showNotification('Failed to copy cURL example to clipboard', 'error');
-        });
-    }
-}
-
-// Additional API Key Management Functions
-async function regenerateAPIKey(keyId) {
-    if (!confirm('Are you sure you want to regenerate this API key? The old key will stop working immediately.')) {
-        return;
-    }
-
-    try {
-        KaleAPI.showLoading(document.body);
-        const result = await KaleAPI.apiRequest(`/user/api-keys/${keyId}/regenerate`, {
-            method: 'POST'
-        });
-        
-        showAPIKeyModal(result.api_key);
-        await loadAPIKeys();
-        KaleAPI.showNotification('API key regenerated successfully!', 'success');
-    } catch (error) {
-        KaleAPI.handleApiError(error, 'Failed to regenerate API key');
-    } finally {
-        KaleAPI.hideLoading(document.body);
-    }
-}
-
-async function toggleAPIKeyStatus(keyId, currentStatus) {
-    const action = currentStatus ? 'disable' : 'enable';
-    
-    if (!confirm(`Are you sure you want to ${action} this API key?`)) {
-        return;
-    }
-
-    try {
-        KaleAPI.showLoading(document.body);
-        await KaleAPI.apiRequest(`/user/api-keys/${keyId}/toggle`, {
-            method: 'POST'
-        });
-        
-        await loadAPIKeys();
-        KaleAPI.showNotification(`API key ${action}d successfully!`, 'success');
-    } catch (error) {
-        KaleAPI.handleApiError(error, `Failed to ${action} API key`);
-    } finally {
-        KaleAPI.hideLoading(document.body);
+    const endpoint = document.getElementById('api-endpoint');
+    if (endpoint) {
+        copyToClipboard(endpoint.textContent);
     }
 }
 
@@ -1521,7 +1125,8 @@ window.Dashboard = {
     showTemplates,
     showSMTP,
     showAPIKeys,
-    loadTemplates,
     loadAPIKeys,
-    generateAPIKey
+    generateAPIKey,
+    deleteAPIKey,
+    copyToClipboard
 };

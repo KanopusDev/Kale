@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     
     # ===== APPLICATION SETTINGS =====
     APP_NAME: str = "Kale Email API Platform"
-    APP_DESCRIPTION: str = "Enterprise Email API Platform with PWA capabilities"
-    VERSION: str = "2.0.0"
+    APP_DESCRIPTION: str = "Professional Email API Platform"
+    VERSION: str = "1.0.0"
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "production")
     DOMAIN: str = os.getenv("DOMAIN", "kale.kanopus.org")
