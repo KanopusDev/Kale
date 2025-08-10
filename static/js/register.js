@@ -233,7 +233,7 @@ function validateAllFields(firstName, lastName, username, email, password, confi
         showFieldError('password', 'Password is required');
         isValid = false;
     } else if (!KaleAPI.validatePassword(password)) {
-        showFieldError('password', 'Password must be at least 8 characters long');
+        showFieldError('password', 'Password must be at least 12 characters with uppercase, lowercase, number, and special character');
         isValid = false;
     }
     
@@ -286,7 +286,7 @@ function validatePassword(event) {
     const field = event.target;
     
     if (password && !KaleAPI.validatePassword(password)) {
-        showFieldError(field.id, 'Password must be at least 8 characters long');
+        showFieldError(field.id, 'Password must be at least 12 characters with uppercase, lowercase, number, and special character');
     } else {
         clearFieldError(event);
     }

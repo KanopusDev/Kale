@@ -270,7 +270,7 @@ class DatabaseManager:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS api_usage_logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
+                        user_id INTEGER,
                         api_key_used VARCHAR(100),
                         endpoint VARCHAR(255) NOT NULL,
                         method VARCHAR(10) NOT NULL,
@@ -284,7 +284,7 @@ class DatabaseManager:
                         error_message TEXT,
                         rate_limited BOOLEAN DEFAULT FALSE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
                     )
                 """)
                 
@@ -528,6 +528,58 @@ class DatabaseManager:
                 if column_name not in api_log_columns:
                     cursor.execute(f"ALTER TABLE api_usage_logs ADD COLUMN {column_name} {column_def}")
                     logger.info(f"Added missing column {column_name} to api_usage_logs table")
+            
+            # Make user_id nullable if it's currently NOT NULL
+            if api_log_columns:
+                cursor.execute("PRAGMA table_info(api_usage_logs)")
+                for column_info in cursor.fetchall():
+                    if column_info[1] == 'user_id' and column_info[3] == 1:  # NOT NULL constraint
+                        # Need to recreate table to remove NOT NULL constraint
+                        cursor.execute("""
+                            CREATE TABLE api_usage_logs_new (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER,
+                                username VARCHAR(255),
+                                template_id VARCHAR(255),
+                                api_key_used VARCHAR(100),
+                                endpoint VARCHAR(255) NOT NULL,
+                                method VARCHAR(10) NOT NULL,
+                                client_ip VARCHAR(45),
+                                ip_address VARCHAR(45),
+                                user_agent TEXT,
+                                request_data TEXT,
+                                response_status INTEGER,
+                                status_code INTEGER,
+                                response_time_ms INTEGER,
+                                bytes_sent INTEGER,
+                                bytes_received INTEGER,
+                                error_message TEXT,
+                                response_message TEXT,
+                                rate_limited BOOLEAN DEFAULT FALSE,
+                                request_id VARCHAR(255),
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+                            )
+                        """)
+                        
+                        # Copy existing data
+                        cursor.execute("""
+                            INSERT INTO api_usage_logs_new 
+                            (id, user_id, api_key_used, endpoint, method, ip_address, user_agent,
+                             request_data, response_status, response_time_ms, bytes_sent, bytes_received,
+                             error_message, rate_limited, created_at)
+                            SELECT id, user_id, api_key_used, endpoint, method, ip_address, user_agent,
+                                   request_data, response_status, response_time_ms, bytes_sent, bytes_received,
+                                   error_message, rate_limited, created_at
+                            FROM api_usage_logs
+                        """)
+                        
+                        # Drop old table and rename
+                        cursor.execute("DROP TABLE api_usage_logs")
+                        cursor.execute("ALTER TABLE api_usage_logs_new RENAME TO api_usage_logs")
+                        
+                        logger.info("Migrated api_usage_logs table to allow NULL user_id")
+                        break
             
         except Exception as e:
             logger.error(f"Migration failed: {e}")

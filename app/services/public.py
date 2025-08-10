@@ -70,7 +70,7 @@ class PublicAPIService:
             if not user.is_active:
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 403, "Account suspended", request_id
+                    request_data, 403, "Account suspended", request_id, user.id
                 )
                 return False, "Account suspended", {"request_id": request_id}
             
@@ -79,7 +79,7 @@ class PublicAPIService:
             if not rate_limit_ok:
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 429, rate_limit_msg, request_id
+                    request_data, 429, rate_limit_msg, request_id, user.id
                 )
                 return False, rate_limit_msg, {"request_id": request_id}
             
@@ -88,7 +88,7 @@ class PublicAPIService:
             if not valid_request:
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 400, validation_error, request_id
+                    request_data, 400, validation_error, request_id, user.id
                 )
                 return False, validation_error, {"request_id": request_id}
             
@@ -97,7 +97,7 @@ class PublicAPIService:
             if not template:
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 404, "Template not found", request_id
+                    request_data, 404, "Template not found", request_id, user.id
                 )
                 return False, "Template not found", {"request_id": request_id}
             
@@ -106,7 +106,7 @@ class PublicAPIService:
             if not smtp_config:
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 400, "SMTP not configured", request_id
+                    request_data, 400, "SMTP not configured", request_id, user.id
                 )
                 return False, "SMTP configuration required", {"request_id": request_id}
             
@@ -121,7 +121,7 @@ class PublicAPIService:
             if not recipients or not any(recipients):
                 await self._log_api_usage(
                     username, template_id, client_ip, user_agent,
-                    request_data, 400, "No recipients specified", request_id
+                    request_data, 400, "No recipients specified", request_id, user.id
                 )
                 return False, "No recipients specified", {"request_id": request_id}
             
@@ -179,7 +179,7 @@ class PublicAPIService:
             
             await self._log_api_usage(
                 username, template_id, client_ip, user_agent,
-                request_data, status_code, response_message, request_id
+                request_data, status_code, response_message, request_id, user.id
             )
             
             # Step 10: Update user statistics
@@ -225,38 +225,65 @@ class PublicAPIService:
     async def _validate_api_key(self, api_key: str, username: str) -> Optional[User]:
         """Validate API key and return user"""
         try:
-            # Hash the API key for secure comparison
-            hashed_key = hashlib.sha256(api_key.encode()).hexdigest()
-            
             with db_manager.get_db_connection() as conn:
                 cursor = conn.cursor()
                 
+                # First, try to find user by username
+                cursor.execute("SELECT * FROM users WHERE username = ? AND is_active = 1", (username,))
+                user_row = cursor.fetchone()
+                
+                if not user_row:
+                    return None
+                
+                # Check if it's the main user API key (stored in users table)
+                if user_row['api_key'] == api_key:
+                    return User(
+                        id=user_row['id'],
+                        username=user_row['username'],
+                        email=user_row['email'],
+                        is_verified=bool(user_row['is_verified']),
+                        is_admin=bool(user_row['is_admin']),
+                        is_active=bool(user_row['is_active']),
+                        api_key=api_key,
+                        created_at=user_row['created_at'],
+                        updated_at=user_row['updated_at']
+                    )
+                
+                # If not main API key, check user-generated API keys
+                hashed_key = hashlib.sha256(api_key.encode()).hexdigest()
+                
                 cursor.execute("""
-                    SELECT u.*, ak.api_key_hash, ak.is_active as key_active, ak.expires_at
-                    FROM users u
-                    JOIN user_api_keys ak ON u.id = ak.user_id
-                    WHERE u.username = ? AND ak.api_key_hash = ? AND ak.is_active = 1
-                """, (username, hashed_key))
+                    SELECT ak.*, ak.is_active as key_active, ak.expires_at
+                    FROM user_api_keys ak
+                    WHERE ak.user_id = ? AND ak.api_key_hash = ? AND ak.is_active = 1
+                """, (user_row['id'], hashed_key))
                 
-                row = cursor.fetchone()
+                key_row = cursor.fetchone()
                 
-                if not row:
+                if not key_row:
                     return None
                 
                 # Check if key is expired
-                if row['expires_at'] and datetime.fromisoformat(row['expires_at']) < datetime.utcnow():
+                if key_row['expires_at'] and datetime.fromisoformat(key_row['expires_at']) < datetime.utcnow():
                     return None
                 
+                # Update last used timestamp
+                cursor.execute("""
+                    UPDATE user_api_keys 
+                    SET last_used = ?, usage_count = usage_count + 1
+                    WHERE id = ?
+                """, (datetime.utcnow(), key_row['id']))
+                
                 return User(
-                    id=row['id'],
-                    username=row['username'],
-                    email=row['email'],
-                    is_verified=bool(row['is_verified']),
-                    is_admin=bool(row['is_admin']),
-                    is_active=bool(row['is_active']),
-                    api_key=api_key,  # Return the original key
-                    created_at=row['created_at'],
-                    updated_at=row['updated_at']
+                    id=user_row['id'],
+                    username=user_row['username'],
+                    email=user_row['email'],
+                    is_verified=bool(user_row['is_verified']),
+                    is_admin=bool(user_row['is_admin']),
+                    is_active=bool(user_row['is_active']),
+                    api_key=api_key,
+                    created_at=user_row['created_at'],
+                    updated_at=user_row['updated_at']
                 )
             
         except Exception as e:
@@ -474,17 +501,23 @@ class PublicAPIService:
         request_data: Dict[str, Any],
         status_code: int,
         response_message: str,
-        request_id: str
+        request_id: str,
+        user_id: int = None
     ):
         """Log API usage for monitoring and analytics"""
         try:
             with db_manager.get_db_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Get user ID
-                cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-                user_row = cursor.fetchone()
-                user_id = user_row['id'] if user_row else None
+                # Get user ID if not provided
+                if not user_id:
+                    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+                    user_row = cursor.fetchone()
+                    user_id = user_row['id'] if user_row else 0  # Use 0 for anonymous/invalid users
+                
+                # Ensure user_id is not None
+                if user_id is None:
+                    user_id = 0
                 
                 # Log the API call
                 cursor.execute("""

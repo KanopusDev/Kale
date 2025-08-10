@@ -275,9 +275,15 @@ window.KaleAPI = {
     },
     
     validatePassword: function(password) {
-        // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/;
-        return passwordRegex.test(password);
+        // At least 12 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
+        if (password.length < 12) return false;
+        if (!/[a-z]/.test(password)) return false;
+        if (!/[A-Z]/.test(password)) return false;
+        if (!/\d/.test(password)) return false;
+        if (!/[!@#$%^&*()_+\-=\[\]{}|;':\".,<>?/~`]/.test(password)) return false;
+        // Check for repeated characters
+        if (/(.)\1{2,}/.test(password)) return false;
+        return true;
     },
     
     validateUsername: function(username) {
@@ -517,7 +523,7 @@ function validateEmailField(field) {
 
 function validatePasswordField(field) {
     const isValid = KaleAPI.validatePassword(field.value);
-    updateFieldValidation(field, isValid, 'Password must be at least 8 characters with uppercase, lowercase, and number');
+    updateFieldValidation(field, isValid, 'Password must be at least 12 characters with uppercase, lowercase, number, and special character');
 }
 
 function validateSMTPPasswordField(field) {
