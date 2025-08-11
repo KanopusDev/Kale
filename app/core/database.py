@@ -305,6 +305,66 @@ class DatabaseManager:
                     )
                 """)
                 
+                # Email bounces table for tracking bounced emails
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS email_bounces (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email VARCHAR(255) NOT NULL,
+                        bounce_type VARCHAR(50) NOT NULL,
+                        bounce_reason TEXT,
+                        bounce_code VARCHAR(10),
+                        smtp_response TEXT,
+                        user_id INTEGER,
+                        template_id VARCHAR(100),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
+                        UNIQUE(email, bounce_type)
+                    )
+                """)
+                
+                # Email delivery tracking table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS email_delivery_tracking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        message_id VARCHAR(255) UNIQUE NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        recipient_email VARCHAR(255) NOT NULL,
+                        template_id VARCHAR(100),
+                        status VARCHAR(50) DEFAULT 'pending',
+                        delivery_attempts INTEGER DEFAULT 0,
+                        last_attempt_at TIMESTAMP,
+                        delivered_at TIMESTAMP,
+                        opened_at TIMESTAMP,
+                        clicked_at TIMESTAMP,
+                        bounced_at TIMESTAMP,
+                        bounce_reason TEXT,
+                        tracking_data JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Rate limiting tracking table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS rate_limit_tracking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        resource_type VARCHAR(50) NOT NULL,
+                        resource_key VARCHAR(255) NOT NULL,
+                        current_count INTEGER DEFAULT 0,
+                        limit_value INTEGER NOT NULL,
+                        window_start TIMESTAMP NOT NULL,
+                        window_end TIMESTAMP NOT NULL,
+                        reset_at TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(user_id, resource_type, resource_key, window_start)
+                    )
+                """)
+                
                 # System audit logs
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -409,7 +469,27 @@ class DatabaseManager:
                     "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action)",
                     "CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_logs(created_at)",
                     
-                    "CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key)"
+                    "CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key)",
+                    
+                    # Indexes for email_bounces table
+                    "CREATE INDEX IF NOT EXISTS idx_email_bounces_email ON email_bounces(email)",
+                    "CREATE INDEX IF NOT EXISTS idx_email_bounces_type ON email_bounces(bounce_type)",
+                    "CREATE INDEX IF NOT EXISTS idx_email_bounces_created_at ON email_bounces(created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_email_bounces_user_id ON email_bounces(user_id)",
+                    
+                    # Indexes for email_delivery_tracking table
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_message_id ON email_delivery_tracking(message_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_user_id ON email_delivery_tracking(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_recipient ON email_delivery_tracking(recipient_email)",
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_status ON email_delivery_tracking(status)",
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_created_at ON email_delivery_tracking(created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_template_id ON email_delivery_tracking(template_id)",
+                    
+                    # Indexes for rate_limit_tracking table
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_user_id ON rate_limit_tracking(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_resource ON rate_limit_tracking(resource_type, resource_key)",
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit_tracking(window_start, window_end)",
+                    "CREATE INDEX IF NOT EXISTS idx_rate_limit_reset_at ON rate_limit_tracking(reset_at)"
                 ]
                 
                 for index_sql in indexes:
@@ -595,6 +675,98 @@ class DatabaseManager:
                         
                         logger.info("Migrated api_usage_logs table to allow NULL user_id")
                         break
+            
+            # Create new tables if they don't exist (for existing installations)
+            new_tables = [
+                ("email_bounces", """
+                    CREATE TABLE IF NOT EXISTS email_bounces (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        email VARCHAR(255) NOT NULL,
+                        bounce_type VARCHAR(50) NOT NULL,
+                        bounce_reason TEXT,
+                        bounce_code VARCHAR(10),
+                        smtp_response TEXT,
+                        user_id INTEGER,
+                        template_id VARCHAR(100),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
+                        UNIQUE(email, bounce_type)
+                    )
+                """),
+                ("email_delivery_tracking", """
+                    CREATE TABLE IF NOT EXISTS email_delivery_tracking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        message_id VARCHAR(255) UNIQUE NOT NULL,
+                        user_id INTEGER NOT NULL,
+                        recipient_email VARCHAR(255) NOT NULL,
+                        template_id VARCHAR(100),
+                        status VARCHAR(50) DEFAULT 'pending',
+                        delivery_attempts INTEGER DEFAULT 0,
+                        last_attempt_at TIMESTAMP,
+                        delivered_at TIMESTAMP,
+                        opened_at TIMESTAMP,
+                        clicked_at TIMESTAMP,
+                        bounced_at TIMESTAMP,
+                        bounce_reason TEXT,
+                        tracking_data JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """),
+                ("rate_limit_tracking", """
+                    CREATE TABLE IF NOT EXISTS rate_limit_tracking (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        resource_type VARCHAR(50) NOT NULL,
+                        resource_key VARCHAR(255) NOT NULL,
+                        current_count INTEGER DEFAULT 0,
+                        limit_value INTEGER NOT NULL,
+                        window_start TIMESTAMP NOT NULL,
+                        window_end TIMESTAMP NOT NULL,
+                        reset_at TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                        UNIQUE(user_id, resource_type, resource_key, window_start)
+                    )
+                """)
+            ]
+            
+            for table_name, create_sql in new_tables:
+                try:
+                    # Check if table exists
+                    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                    if not cursor.fetchone():
+                        cursor.execute(create_sql)
+                        logger.info(f"Created missing table: {table_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to create table {table_name}: {e}")
+            
+            # Create missing indexes for new tables
+            new_indexes = [
+                "CREATE INDEX IF NOT EXISTS idx_email_bounces_email ON email_bounces(email)",
+                "CREATE INDEX IF NOT EXISTS idx_email_bounces_type ON email_bounces(bounce_type)",
+                "CREATE INDEX IF NOT EXISTS idx_email_bounces_created_at ON email_bounces(created_at)",
+                "CREATE INDEX IF NOT EXISTS idx_email_bounces_user_id ON email_bounces(user_id)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_message_id ON email_delivery_tracking(message_id)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_user_id ON email_delivery_tracking(user_id)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_recipient ON email_delivery_tracking(recipient_email)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_status ON email_delivery_tracking(status)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_created_at ON email_delivery_tracking(created_at)",
+                "CREATE INDEX IF NOT EXISTS idx_delivery_tracking_template_id ON email_delivery_tracking(template_id)",
+                "CREATE INDEX IF NOT EXISTS idx_rate_limit_user_id ON rate_limit_tracking(user_id)",
+                "CREATE INDEX IF NOT EXISTS idx_rate_limit_resource ON rate_limit_tracking(resource_type, resource_key)",
+                "CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit_tracking(window_start, window_end)",
+                "CREATE INDEX IF NOT EXISTS idx_rate_limit_reset_at ON rate_limit_tracking(reset_at)"
+            ]
+            
+            for index_sql in new_indexes:
+                try:
+                    cursor.execute(index_sql)
+                except Exception as e:
+                    logger.warning(f"Failed to create index: {e}")
             
         except Exception as e:
             logger.error(f"Migration failed: {e}")
