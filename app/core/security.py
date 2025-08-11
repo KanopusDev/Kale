@@ -224,10 +224,6 @@ class SecurityManager:
         if not re.search(special_chars, password):
             return False, "Password must contain at least one special character"
         
-        # Check for common patterns
-        if re.search(r"(.)\1{2,}", password):
-            return False, "Password must not contain repeated characters (3 or more)"
-        
         # Check for sequential characters
         if re.search(r"(012|123|234|345|456|567|678|789|890|abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)", password.lower()):
             return False, "Password must not contain sequential characters"

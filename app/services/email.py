@@ -343,6 +343,26 @@ class EmailService:
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         return bool(re.match(email_pattern, email.strip()))
     
+    @staticmethod
+    def extract_variables(content: str) -> List[str]:
+        """Extract template variables from content (e.g., {{variable_name}})"""
+        import re
+        if not content:
+            return []
+        
+        # Find all variables in {{variable_name}} format
+        pattern = r'\{\{([^}]+)\}\}'
+        matches = re.findall(pattern, content)
+        
+        # Clean up variable names (remove spaces, convert to lowercase if needed)
+        variables = []
+        for match in matches:
+            variable_name = match.strip()
+            if variable_name and variable_name not in variables:
+                variables.append(variable_name)
+        
+        return variables
+    
     def _validate_smtp_config(self, config: SMTPConfigCreate) -> Tuple[bool, str]:
         """Validate SMTP configuration"""
         if not config.smtp_host or not config.smtp_host.strip():

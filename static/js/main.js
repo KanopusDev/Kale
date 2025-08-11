@@ -281,8 +281,6 @@ window.KaleAPI = {
         if (!/[A-Z]/.test(password)) return false;
         if (!/\d/.test(password)) return false;
         if (!/[!@#$%^&*()_+\-=\[\]{}|;':\".,<>?/~`]/.test(password)) return false;
-        // Check for repeated characters
-        if (/(.)\1{2,}/.test(password)) return false;
         return true;
     },
     
