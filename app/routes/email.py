@@ -283,9 +283,9 @@ async def send_emails_api(
                 detail=f"Daily email limit exceeded. Limit: {daily_limit}, Remaining: {remaining}"
             )
         
-        # Get template
-        template = template.get_template_by_id(user.id, template_id)
-        if not template:
+        # Get template - using the template service
+        template_obj = template.get_template_by_id(user.id, template_id)
+        if not template_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Template not found"
@@ -309,13 +309,13 @@ async def send_emails_api(
                 break
             
             try:
-                success, error_message = await email.send_email(
-                    smtp_config=smtp_config,
-                    recipient=recipient,
-                    subject=template.subject,
-                    html_content=template.html_content,
-                    text_content=template.text_content,
-                    variables=email_data.variables
+                # Use the enhanced email sending method
+                success, error_message, message_id = await email.send_email_enhanced(
+                    user_id=user.id,
+                    template_id=template_id,
+                    recipient_email=recipient,
+                    variables=email_data.variables,
+                    smtp_config=smtp_config
                 )
                 
                 if success:
@@ -325,36 +325,20 @@ async def send_emails_api(
                 else:
                     status_msg = "failed"
                 
-                # Log email attempt
-                email.log_email(
-                    user_id=user.id,
-                    template_id=template_id,
-                    recipient=recipient,
-                    subject=template.subject,
-                    status=status_msg,
-                    error_message=error_message if not success else None
-                )
-                
                 results.append({
                     "recipient": recipient,
                     "status": status_msg,
+                    "message_id": message_id if success else None,
                     "error": error_message if not success else None
                 })
                 
             except Exception as e:
                 logger.error(f"Error sending email to {recipient}: {e}")
-                email.log_email(
-                    user_id=user.id,
-                    template_id=template_id,
-                    recipient=recipient,
-                    subject=template.subject,
-                    status="failed",
-                    error_message=str(e)
-                )
                 
                 results.append({
                     "recipient": recipient,
                     "status": "failed",
+                    "message_id": None,
                     "error": str(e)
                 })
         

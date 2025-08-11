@@ -1,507 +1,729 @@
+"""
+Enterprise-grade Email Service for Kale Platform
+Production-ready SMTP handling with proper SSL/TLS and connection management
+"""
+
+import asyncio
 import aiosmtplib
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.utils import formataddr, make_msgid
-from typing import Optional, List, Dict, Any, Union
-from app.core.database import db_manager
-from app.models.schemas import SMTPConfig, SMTPConfigCreate, EmailSendRequest, EmailLog
-from app.core.config import settings
+import ssl
+import socket
 import logging
-import asyncio
-from datetime import datetime, date, timedelta
 import json
+import uuid
 import re
 import hashlib
-import base64
 import time
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List, Any, Tuple, Set
 from contextlib import asynccontextmanager
-import ssl
+from dataclasses import dataclass, field
+from threading import Lock
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr, make_msgid
 import certifi
-from dataclasses import dataclass
-import uuid
+
+from app.core.database import db_manager
+from app.models.schemas import SMTPConfig, SMTPConfigCreate, EmailLog
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 @dataclass
-class EmailDeliveryStatus:
-    """Email delivery status tracking"""
-    message_id: str
-    status: str  # pending, sent, delivered, bounced, failed
-    timestamp: datetime
-    error_message: Optional[str] = None
-    retry_count: int = 0
-    
-@dataclass
-class EmailMetrics:
-    """Email metrics for analytics"""
-    total_sent: int = 0
-    total_delivered: int = 0
-    total_bounced: int = 0
-    total_failed: int = 0
-    delivery_rate: float = 0.0
-    bounce_rate: float = 0.0
+class ConnectionPoolEntry:
+    """SMTP connection pool entry with metadata"""
+    connection: aiosmtplib.SMTP
+    created_at: datetime
+    last_used: datetime
+    usage_count: int = 0
+    is_healthy: bool = True
 
-class EmailService:
-    """Professional email delivery service with comprehensive features"""
+@dataclass
+class SMTPConnectionConfig:
+    """Normalized SMTP connection configuration"""
+    host: str
+    port: int
+    username: Optional[str]
+    password: Optional[str]
+    use_tls: bool
+    use_ssl: bool
+    timeout: int = 30
     
-    def __init__(self):
-        self.connection_pool = {}
-        self.retry_queues = {}
-        self.delivery_tracking = {}
+    def __post_init__(self):
+        """Validate and normalize configuration"""
+        # Normalize host
+        self.host = str(self.host).strip()
+        if not self.host:
+            raise ValueError("SMTP host is required")
         
-    @asynccontextmanager
-    async def get_smtp_connection(self, config: SMTPConfig):
-        """Get pooled SMTP connection with proper error handling"""
-        connection_key = f"{config.smtp_host}:{config.smtp_port}:{config.smtp_username}"
+        # Validate port
+        if not isinstance(self.port, int) or not (1 <= self.port <= 65535):
+            raise ValueError(f"Invalid SMTP port: {self.port}")
         
-        if connection_key in self.connection_pool:
-            connection = self.connection_pool[connection_key]
-            try:
-                # Test if connection is still alive
-                await connection.noop()
-                yield connection
-                return
-            except Exception:
-                # Connection is dead, remove from pool
-                del self.connection_pool[connection_key]
+        # Auto-configure SSL/TLS based on port if not explicitly set
+        if self.port == 465 and not self.use_ssl and not self.use_tls:
+            self.use_ssl = True
+            self.use_tls = False
+        elif self.port in [587, 25] and not self.use_ssl and not self.use_tls:
+            self.use_ssl = False
+            self.use_tls = True
+    
+    @property
+    def connection_key(self) -> str:
+        """Generate unique connection pool key"""
+        auth_hash = ""
+        if self.username:
+            auth_hash = hashlib.md5(f"{self.username}:{self.password or ''}".encode()).hexdigest()[:8]
+        return f"{self.host}:{self.port}:{self.use_ssl}:{self.use_tls}:{auth_hash}"
+
+class SMTPConnectionManager:
+    """Thread-safe SMTP connection pool manager"""
+    
+    def __init__(self, max_pool_size: int = 20, connection_timeout: int = 30, pool_cleanup_interval: int = 300):
+        self._pool: Dict[str, ConnectionPoolEntry] = {}
+        self._pool_lock = Lock()
+        self._max_pool_size = max_pool_size
+        self._connection_timeout = connection_timeout
+        self._pool_cleanup_interval = pool_cleanup_interval
+        self._last_cleanup = time.time()
+    
+    def _cleanup_stale_connections(self) -> None:
+        """Remove stale and unhealthy connections from pool"""
+        current_time = time.time()
+        if current_time - self._last_cleanup < self._pool_cleanup_interval:
+            return
         
-        # Create new connection
-        connection = aiosmtplib.SMTP(
-            hostname=config.smtp_host,
-            port=config.smtp_port,
-            use_tls=config.use_tls,
-            timeout=30,
-            start_tls=config.use_tls
-        )
+        with self._pool_lock:
+            stale_keys = []
+            for key, entry in self._pool.items():
+                # Remove connections that haven't been used in 10 minutes or are unhealthy
+                if (current_time - entry.last_used.timestamp() > 600 or 
+                    not entry.is_healthy or
+                    entry.usage_count > 1000):  # Prevent connection reuse issues
+                    stale_keys.append(key)
+            
+            for key in stale_keys:
+                entry = self._pool.pop(key, None)
+                if entry and entry.connection:
+                    try:
+                        asyncio.create_task(entry.connection.quit())
+                    except Exception as e:
+                        logger.debug(f"Error closing stale connection: {e}")
+            
+            self._last_cleanup = current_time
+            if stale_keys:
+                logger.info(f"Cleaned up {len(stale_keys)} stale SMTP connections")
+    
+    async def _create_connection(self, config: SMTPConnectionConfig) -> aiosmtplib.SMTP:
+        """Create a new SMTP connection with proper SSL/TLS configuration and enhanced authentication"""
+        # Create SSL context with secure defaults
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        ssl_context.set_ciphers('DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK')
+        
+        # Use same environment check as sync test
+        if hasattr(settings, 'ENVIRONMENT') and settings.ENVIRONMENT == "development":
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        else:
+            ssl_context.check_hostname = True
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+        
+        logger.info(f"Creating async SMTP connection to {config.host}:{config.port}")
+        
+        smtp = None
         
         try:
-            await connection.connect()
-            if config.smtp_username and config.smtp_password:
-                await connection.login(config.smtp_username, config.smtp_password)
+            if config.use_ssl:
+                # Direct SSL connection (port 465)
+                logger.info("Using SSL connection for async SMTP")
+                smtp = aiosmtplib.SMTP(
+                    hostname=config.host.strip(),
+                    port=config.port,
+                    timeout=config.timeout,
+                    use_tls=True,
+                    tls_context=ssl_context
+                )
+            elif config.use_tls:
+                # STARTTLS connection (port 587/25) - aiosmtplib handles this differently
+                logger.info("Using STARTTLS connection for async SMTP")
+                smtp = aiosmtplib.SMTP(
+                    hostname=config.host.strip(),
+                    port=config.port,
+                    timeout=config.timeout,
+                    start_tls=True,  # This tells aiosmtplib to use STARTTLS automatically
+                    tls_context=ssl_context
+                )
+            else:
+                # Plain connection
+                logger.info("Using plain connection for async SMTP")
+                smtp = aiosmtplib.SMTP(
+                    hostname=config.host.strip(),
+                    port=config.port,
+                    timeout=config.timeout,
+                    use_tls=False,
+                    tls_context=ssl_context
+                )
             
-            # Store in pool for reuse
-            self.connection_pool[connection_key] = connection
+            # Connect to server - aiosmtplib will handle STARTTLS automatically if start_tls=True
+            logger.info("Connecting to SMTP server...")
+            await smtp.connect()
+            
+            # Send EHLO command
+            logger.info("Sending EHLO command...")
+            await smtp.ehlo()
+            
+            # No need to call starttls manually - aiosmtplib handles it automatically
+            
+            # Authenticate if credentials provided - use same method as sync test
+            if config.username and config.password:
+                logger.info(f"Authenticating async SMTP with username: {config.username}")
+                
+                # Clean up credentials the same way as in test
+                username = config.username.strip()
+                password = config.password.strip()
+                
+                try:
+                    # Use the same authentication approach as the sync test
+                    await smtp.login(username, password)
+                    logger.info("Async SMTP authentication successful")
+                except Exception as auth_error:
+                    logger.error(f"Async SMTP authentication failed: {auth_error}")
+                    # Provide the same detailed error handling as sync test
+                    error_msg = str(auth_error)
+                    if "535" in error_msg:
+                        if "gmail" in config.host.lower():
+                            raise ConnectionError("Authentication failed. For Gmail, ensure you're using an App Password, not your regular password.")
+                        elif "outlook" in config.host.lower() or "hotmail" in config.host.lower():
+                            raise ConnectionError("Authentication failed. For Outlook/Hotmail, ensure proper authentication settings.")
+                        else:
+                            raise ConnectionError(f"Authentication failed: Invalid username or password. Error: {error_msg}")
+                    else:
+                        raise ConnectionError(f"Authentication failed: {error_msg}")
+            
+            # Test connection with NOOP
+            logger.info("Testing async SMTP connection with NOOP...")
+            await smtp.noop()
+            logger.info("Async SMTP connection established successfully")
+            
+            return smtp
+            
+        except Exception as e:
+            logger.error(f"Failed to create async SMTP connection: {e}")
+            if smtp:
+                try:
+                    await smtp.quit()
+                except:
+                    pass
+            raise ConnectionError(f"Failed to establish SMTP connection: {e}")
+    
+    @asynccontextmanager
+    async def get_connection(self, config: SMTPConnectionConfig):
+        """Get a pooled SMTP connection with automatic cleanup"""
+        self._cleanup_stale_connections()
+        
+        connection_key = config.connection_key
+        connection = None
+        pool_entry = None
+        
+        # Try to get existing connection from pool
+        with self._pool_lock:
+            if connection_key in self._pool:
+                pool_entry = self._pool[connection_key]
+                connection = pool_entry.connection
+        
+        # Test existing connection
+        if connection and pool_entry:
+            try:
+                await connection.noop()
+                pool_entry.last_used = datetime.utcnow()
+                pool_entry.usage_count += 1
+                pool_entry.is_healthy = True
+                
+                yield connection
+                return
+                
+            except Exception as e:
+                logger.debug(f"Existing SMTP connection failed health check: {e}")
+                pool_entry.is_healthy = False
+                
+                # Remove unhealthy connection from pool
+                with self._pool_lock:
+                    self._pool.pop(connection_key, None)
+                
+                try:
+                    await connection.quit()
+                except:
+                    pass
+                
+                connection = None
+        
+        # Create new connection
+        try:
+            connection = await self._create_connection(config)
+            
+            # Add to pool if there's space
+            with self._pool_lock:
+                if len(self._pool) < self._max_pool_size:
+                    self._pool[connection_key] = ConnectionPoolEntry(
+                        connection=connection,
+                        created_at=datetime.utcnow(),
+                        last_used=datetime.utcnow(),
+                        usage_count=1,
+                        is_healthy=True
+                    )
+            
             yield connection
             
         except Exception as e:
-            logger.error(f"SMTP connection failed: {e}")
-            try:
-                await connection.quit()
-            except:
-                pass
+            if connection:
+                try:
+                    await connection.quit()
+                except:
+                    pass
             raise
+        
+        finally:
+            # Update pool entry if connection is still in pool
+            with self._pool_lock:
+                if connection_key in self._pool:
+                    self._pool[connection_key].last_used = datetime.utcnow()
+
+class EmailService:
+    """Enterprise-grade email service with robust SMTP handling"""
     
-    def generate_message_id(self, domain: Optional[str] = None) -> str:
-        """Generate unique message ID for email tracking"""
-        if not domain:
-            domain = settings.EMAIL_DOMAIN or "kale.kanopus.org"
-        return make_msgid(domain=domain)
+    def __init__(self):
+        self.connection_manager = SMTPConnectionManager()
+        self._delivery_tracking: Dict[str, Dict] = {}
+        self._bounce_tracking: Set[str] = set()
+        
+        # Load bounce list from database
+        self._load_bounce_list()
     
-    def create_email_headers(self, from_email: str, to_email: str, 
-                           subject: str, config: SMTPConfig,
-                           custom_headers: Optional[Dict] = None) -> Dict[str, str]:
-        """Create comprehensive email headers with tracking"""
-        headers = {
-            'Message-ID': self.generate_message_id(),
-            'Date': datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S +0000'),
-            'From': formataddr((config.from_name or '', from_email)),
-            'To': to_email,
-            'Subject': subject,
-            'MIME-Version': '1.0',
-            'X-Mailer': f'Kale Email API v{settings.APP_VERSION}',
-            'X-Priority': '3',
-            'X-MSMail-Priority': 'Normal',
-            'List-Unsubscribe': f'<mailto:unsubscribe@{settings.EMAIL_DOMAIN}>',
-            'Return-Path': from_email,
-        }
-        
-        # Add tracking headers
-        tracking_id = str(uuid.uuid4())
-        headers['X-Kale-Tracking-ID'] = tracking_id
-        headers['X-Kale-User-ID'] = str(config.user_id) if hasattr(config, 'user_id') else 'unknown'
-        
-        # Add SPF, DKIM preparation headers
-        if settings.EMAIL_DKIM_ENABLED:
-            headers['DKIM-Signature'] = 'v=1; a=rsa-sha256; c=relaxed/relaxed'
-        
-        # Add custom headers
-        if custom_headers:
-            headers.update(custom_headers)
-            
-        return headers
-    @staticmethod
-    def create_smtp_config(user_id: int, config_data: SMTPConfigCreate) -> Optional[SMTPConfig]:
-        """Create SMTP configuration for user with validation"""
+    def _load_bounce_list(self) -> None:
+        """Load email bounce list from database"""
         try:
-            # Validate SMTP configuration before saving
-            if not EmailService._validate_smtp_config(config_data):
-                raise ValueError("Invalid SMTP configuration")
+            with db_manager.get_db_connection() as conn:
+                cursor = conn.execute("""
+                    SELECT DISTINCT email FROM email_bounces 
+                    WHERE bounce_type = 'hard' AND created_at > ?
+                """, (datetime.utcnow() - timedelta(days=30),))
+                
+                for row in cursor.fetchall():
+                    self._bounce_tracking.add(row[0].lower())
+                    
+        except Exception as e:
+            logger.warning(f"Failed to load bounce list: {e}")
+    
+    @staticmethod
+    def _encrypt_password(password: str) -> str:
+        """Encrypt password for database storage"""
+        if not password:
+            return ""
+        
+        # Use a simple encoding for now - in production, use proper encryption
+        import base64
+        return base64.b64encode(password.encode('utf-8')).decode('ascii')
+    
+    @staticmethod
+    def _decrypt_password(encrypted_password: str) -> str:
+        """Decrypt password from database"""
+        if not encrypted_password:
+            return ""
+        
+        try:
+            import base64
+            return base64.b64decode(encrypted_password.encode('ascii')).decode('utf-8')
+        except Exception:
+            # Fallback for unencrypted passwords
+            return encrypted_password
+    
+    def _validate_email_address(self, email: str) -> bool:
+        """Validate email address format"""
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(email_pattern, email.strip()))
+    
+    def _validate_smtp_config(self, config: SMTPConfigCreate) -> Tuple[bool, str]:
+        """Validate SMTP configuration"""
+        if not config.smtp_host or not config.smtp_host.strip():
+            return False, "SMTP host is required"
+        
+        if not isinstance(config.smtp_port, int) or not (1 <= config.smtp_port <= 65535):
+            return False, f"Invalid SMTP port: {config.smtp_port}"
+        
+        if not self._validate_email_address(config.from_email):
+            return False, "Invalid from email address"
+        
+        # Validate common SMTP configurations
+        if config.smtp_port == 465 and not config.use_tls:
+            logger.warning("Port 465 typically requires SSL/TLS")
+        elif config.smtp_port in [587, 25] and config.use_tls is False:
+            logger.warning("Ports 587/25 typically use STARTTLS")
+        
+        return True, "Configuration valid"
+    
+    def create_smtp_config(self, user_id: int, config_data: SMTPConfigCreate) -> Optional[SMTPConfig]:
+        """Create and store SMTP configuration"""
+        try:
+            # Validate configuration
+            is_valid, error_msg = self._validate_smtp_config(config_data)
+            if not is_valid:
+                logger.error(f"Invalid SMTP config: {error_msg}")
+                return None
             
             with db_manager.get_db_connection() as conn:
-                
-                # Deactivate existing configs for this user
+                # Deactivate existing configs
                 conn.execute(
-                    "UPDATE smtp_configs SET is_active = ?, updated_at = ? WHERE user_id = ?",
-                    (False, datetime.utcnow(), user_id)
+                    "UPDATE smtp_configs SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+                    (user_id,)
                 )
                 
-                # Encrypt password before storing
-                encrypted_password = EmailService._encrypt_password(config_data.smtp_password) if config_data.smtp_password else ""
+                # Encrypt password
+                encrypted_password = self._encrypt_password(config_data.smtp_password)
                 
-                # Insert new config
+                # Insert new configuration
                 cursor = conn.execute("""
                     INSERT INTO smtp_configs 
                     (user_id, smtp_host, smtp_port, smtp_username, smtp_password, 
-                     use_tls, from_email, from_name, is_active, created_at, updated_at,
-                     max_send_rate, daily_limit, connection_timeout)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     use_tls, from_email, from_name, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """, (
-                    user_id, config_data.smtp_host, config_data.smtp_port,
-                    config_data.smtp_username, encrypted_password,
-                    config_data.use_tls, config_data.from_email, 
-                    config_data.from_name, True, datetime.utcnow(), datetime.utcnow(),
-                    getattr(config_data, 'max_send_rate', 10),  # Default 10 emails/minute
-                    getattr(config_data, 'daily_limit', 1000),  # Default 1000/day
-                    getattr(config_data, 'connection_timeout', 30)  # Default 30 seconds
+                    user_id,
+                    config_data.smtp_host.strip(),
+                    config_data.smtp_port,
+                    config_data.smtp_username.strip() if config_data.smtp_username else None,
+                    encrypted_password,
+                    1 if config_data.use_tls else 0,
+                    config_data.from_email.strip(),
+                    config_data.from_name.strip() if config_data.from_name else None
                 ))
                 
                 config_id = cursor.lastrowid
                 conn.commit()
                 
-                # Fetch created config using column names
-                config_row = conn.execute("SELECT * FROM smtp_configs WHERE id = ?", (config_id,)).fetchone()
+                # Return created configuration
+                return SMTPConfig(
+                    id=config_id,
+                    user_id=user_id,
+                    smtp_host=config_data.smtp_host.strip(),
+                    smtp_port=config_data.smtp_port,
+                    smtp_username=config_data.smtp_username.strip() if config_data.smtp_username else "",
+                    smtp_password=config_data.smtp_password,  # Return unencrypted for immediate use
+                    use_tls=config_data.use_tls,
+                    from_email=config_data.from_email.strip(),
+                    from_name=config_data.from_name.strip() if config_data.from_name else "",
+                    is_active=True,
+                    created_at=datetime.utcnow()
+                )
                 
-                if config_row:
-                    # Handle both old and new column names for password
-                    password_value = None
-                    if 'smtp_password' in config_row.keys():
-                        password_value = config_row['smtp_password']
-                    elif 'smtp_password_encrypted' in config_row.keys():
-                        password_value = config_row['smtp_password_encrypted']
-                    
-                    # Decrypt password for return object
-                    decrypted_password = EmailService._decrypt_password(password_value) if password_value else ''
-                    
-                    return SMTPConfig(
-                        id=config_row['id'],
-                        user_id=config_row['user_id'],
-                        smtp_host=config_row['smtp_host'],
-                        smtp_port=config_row['smtp_port'],
-                        smtp_username=config_row['smtp_username'],
-                        smtp_password=decrypted_password,
-                        use_tls=bool(config_row['use_tls']),
-                        from_email=config_row['from_email'],
-                        from_name=config_row['from_name'],
-                        is_active=bool(config_row['is_active']),
-                        created_at=config_row['created_at']
-                    )
-                return None
-            
         except Exception as e:
-            logger.error(f"Error creating SMTP config: {e}")
+            logger.error(f"Failed to create SMTP config: {e}")
             return None
     
-    @staticmethod
-    def _validate_smtp_config(config: SMTPConfigCreate) -> bool:
-        """Validate SMTP configuration parameters"""
-        # Basic validation
-        if not config.smtp_host or not config.smtp_port:
-            return False
-        
-        # Port validation
-        if not (1 <= config.smtp_port <= 65535):
-            return False
-        
-        # Email validation
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, config.from_email):
-            return False
-        
-        # Common SMTP ports validation
-        valid_ports = {25, 465, 587, 2525}
-        if config.smtp_port not in valid_ports:
-            logger.warning(f"Unusual SMTP port: {config.smtp_port}")
-        
-        return True
-    
-    @staticmethod
-    def _encrypt_password(password: str) -> str:
-        """Encrypt password for secure storage"""
-        return base64.b64encode(password.encode()).decode()
-    
-    @staticmethod
-    def _decrypt_password(encrypted_password: str) -> str:
-        """Decrypt password for use"""
-        try:
-            return base64.b64decode(encrypted_password.encode()).decode()
-        except Exception:
-            return encrypted_password  # Fallback for unencrypted passwords
-            
-        except Exception as e:
-            logger.error(f"Error creating SMTP config: {e}")
-            return None
-    
-    @staticmethod
-    def get_user_smtp_config(user_id: int) -> Optional[SMTPConfig]:
-        """Get active SMTP configuration for user"""
+    def get_user_smtp_config(self, user_id: int) -> Optional[SMTPConfig]:
+        """Retrieve user's active SMTP configuration"""
         try:
             with db_manager.get_db_connection() as conn:
+                cursor = conn.execute("""
+                    SELECT id, user_id, smtp_host, smtp_port, smtp_username, smtp_password,
+                           use_tls, from_email, from_name, is_active, created_at, updated_at
+                    FROM smtp_configs 
+                    WHERE user_id = ? AND is_active = 1 
+                    ORDER BY created_at DESC LIMIT 1
+                """, (user_id,))
                 
-                config_row = conn.execute(
-                    "SELECT * FROM smtp_configs WHERE user_id = ? AND is_active = ? ORDER BY created_at DESC LIMIT 1",
-                    (user_id, True)
-                ).fetchone()
-                
-                if not config_row:
+                row = cursor.fetchone()
+                if not row:
                     return None
                 
-                # Handle both old and new column names for password
-                password_value = None
-                if 'smtp_password' in config_row.keys():
-                    password_value = config_row['smtp_password']
-                elif 'smtp_password_encrypted' in config_row.keys():
-                    password_value = config_row['smtp_password_encrypted']
-                
-                # Decrypt password if it exists
-                decrypted_password = EmailService._decrypt_password(password_value) if password_value else ''
+                # Decrypt password
+                decrypted_password = self._decrypt_password(row[5])
                 
                 return SMTPConfig(
-                    id=config_row['id'],
-                    user_id=config_row['user_id'],
-                    smtp_host=config_row['smtp_host'],
-                    smtp_port=config_row['smtp_port'],
-                    smtp_username=config_row['smtp_username'],
+                    id=row[0],
+                    user_id=row[1],
+                    smtp_host=row[2],
+                    smtp_port=row[3],
+                    smtp_username=row[4] or "",
                     smtp_password=decrypted_password,
-                    use_tls=bool(config_row['use_tls']),
-                    from_email=config_row['from_email'],
-                    from_name=config_row['from_name'],
-                    is_active=bool(config_row['is_active']),
-                    created_at=config_row['created_at']
+                    use_tls=bool(row[6]),
+                    from_email=row[7],
+                    from_name=row[8] or "",
+                    is_active=bool(row[9]),
+                    created_at=row[10]
                 )
-            
+                
         except Exception as e:
-            logger.error(f"Error getting SMTP config: {e}")
+            logger.error(f"Failed to get SMTP config: {e}")
             return None
     
-    @staticmethod
-    def test_smtp_connection(config: SMTPConfig) -> tuple[bool, str]:
-        """Test SMTP connection with proper SSL/TLS handling and encoding"""
+    def test_smtp_connection(self, config: SMTPConfig) -> Tuple[bool, str]:
+        """Test SMTP connection with enhanced error handling"""
         try:
-            # Sanitize and validate config data
-            smtp_host = str(config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
-            smtp_username = str(config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if config.smtp_username else ''
-            smtp_password = str(config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if config.smtp_password else ''
+            # Create connection configuration
+            smtp_config = SMTPConnectionConfig(
+                host=config.smtp_host.strip(),
+                port=config.smtp_port,
+                username=config.smtp_username.strip() if config.smtp_username else "",
+                password=config.smtp_password,
+                use_tls=config.use_tls,
+                use_ssl=config.smtp_port == 465,
+                timeout=30
+            )
             
-            if not smtp_host:
-                return False, "SMTP host is required"
-            
-            # Create SSL context with proper configuration
+            # Test synchronous connection with enhanced SSL handling
             ssl_context = ssl.create_default_context(cafile=certifi.where())
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
+            ssl_context.set_ciphers('DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK')
+            
+            if hasattr(settings, 'ENVIRONMENT') and settings.ENVIRONMENT == "development":
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
             
             server = None
             
-            # Handle different connection types based on port and use_tls setting
-            if config.smtp_port == 465:
-                # SSL connection (usually port 465)
-                server = smtplib.SMTP_SSL(smtp_host, config.smtp_port, context=ssl_context)
-            elif config.use_tls and config.smtp_port in [587, 25]:
-                # TLS connection (usually port 587 or 25)
-                server = smtplib.SMTP(smtp_host, config.smtp_port)
-                server.starttls(context=ssl_context)
-            else:
-                # Plain connection or custom configuration
-                if config.use_tls:
-                    server = smtplib.SMTP(smtp_host, config.smtp_port)
-                    server.starttls(context=ssl_context)
+            try:
+                logger.info(f"Testing SMTP connection to {smtp_config.host}:{smtp_config.port}")
+                
+                if smtp_config.use_ssl:
+                    # SSL connection (port 465)
+                    logger.info("Using SSL connection")
+                    server = smtplib.SMTP_SSL(
+                        smtp_config.host, 
+                        smtp_config.port, 
+                        context=ssl_context,
+                        timeout=smtp_config.timeout
+                    )
                 else:
-                    # Try plain connection first
-                    try:
-                        server = smtplib.SMTP(smtp_host, config.smtp_port)
-                    except Exception:
-                        # If plain fails, try SSL
-                        server = smtplib.SMTP_SSL(smtp_host, config.smtp_port, context=ssl_context)
-            
-            # Check if server supports authentication before attempting login
-            if smtp_username and smtp_password:
-                try:
-                    # Get server capabilities
-                    capabilities = server.ehlo_or_helo_if_needed()
+                    # Plain or STARTTLS connection
+                    logger.info("Using plain/STARTTLS connection")
+                    server = smtplib.SMTP(
+                        smtp_config.host, 
+                        smtp_config.port,
+                        timeout=smtp_config.timeout
+                    )
                     
-                    # Check if AUTH is supported
-                    if hasattr(server, 'has_extn') and server.has_extn('auth'):
-                        server.login(smtp_username, smtp_password)
-                    else:
-                        # Some servers don't require AUTH for local/trusted connections
-                        logger.warning(f"SMTP server {smtp_host} doesn't support AUTH extension, continuing without authentication")
-                except smtplib.SMTPAuthenticationError as auth_error:
-                    server.quit()
-                    return False, f"Authentication failed: {str(auth_error)}"
-                except Exception as login_error:
-                    # If login fails but server doesn't support AUTH, it might still work for sending
-                    logger.warning(f"Login attempt failed: {login_error}, continuing without authentication")
+                    if smtp_config.use_tls:
+                        logger.info("Starting TLS encryption")
+                        server.starttls(context=ssl_context)
+                
+                # Test EHLO/HELO
+                server.ehlo()
+                
+                # Authenticate if credentials provided
+                if smtp_config.username and smtp_config.password:
+                    logger.info(f"Authenticating with username: {smtp_config.username}")
+                    
+                    # Clean up credentials
+                    username = smtp_config.username.strip()
+                    password = smtp_config.password.strip()
+                    
+                    # Handle special authentication cases
+                    try:
+                        server.login(username, password)
+                        logger.info("SMTP authentication successful")
+                    except smtplib.SMTPAuthenticationError as auth_error:
+                        error_msg = str(auth_error)
+                        logger.error(f"SMTP authentication failed: {error_msg}")
+                        
+                        # Provide helpful error messages
+                        if "535" in error_msg:
+                            if "gmail" in smtp_config.host.lower():
+                                return False, "Authentication failed. For Gmail, ensure you're using an App Password, not your regular password. Enable 2FA and generate an App Password in your Google Account settings."
+                            elif "outlook" in smtp_config.host.lower() or "hotmail" in smtp_config.host.lower():
+                                return False, "Authentication failed. For Outlook/Hotmail, ensure 'Less secure app access' is enabled or use OAuth2. Check your account security settings."
+                            else:
+                                return False, f"Authentication failed: Invalid username or password. Please verify your credentials. Error: {error_msg}"
+                        else:
+                            return False, f"Authentication failed: {error_msg}"
+                else:
+                    logger.info("No authentication credentials provided")
+                
+                # Test with NOOP
+                server.noop()
+                server.quit()
+                
+                logger.info("SMTP connection test successful")
+                return True, "SMTP connection and authentication successful"
+                
+            except smtplib.SMTPAuthenticationError as e:
+                error_msg = str(e)
+                logger.error(f"SMTP authentication error: {error_msg}")
+                
+                # Provide specific guidance based on the error
+                if "535" in error_msg:
+                    return False, f"Authentication failed: Invalid credentials. Please check your username and password. For Gmail, use App Passwords. Error: {error_msg}"
+                elif "534" in error_msg:
+                    return False, f"Authentication mechanism not supported. Try enabling 'Less secure app access' or use App Passwords. Error: {error_msg}"
+                else:
+                    return False, f"Authentication failed: {error_msg}"
+                    
+            except smtplib.SMTPConnectError as e:
+                logger.error(f"SMTP connection error: {e}")
+                return False, f"Connection failed: Unable to connect to {smtp_config.host}:{smtp_config.port}. Check host and port settings. Error: {str(e)}"
+                
+            except smtplib.SMTPServerDisconnected as e:
+                logger.error(f"SMTP server disconnected: {e}")
+                return False, f"Server disconnected unexpectedly. This may be due to firewall or network issues. Error: {str(e)}"
+                
+            except ssl.SSLError as e:
+                logger.error(f"SSL error: {e}")
+                ssl_error = str(e)
+                if "certificate verify failed" in ssl_error.lower():
+                    return False, f"SSL certificate verification failed. This may be due to self-signed certificates or outdated certificates. Error: {ssl_error}"
+                else:
+                    return False, f"SSL/TLS error: {ssl_error}. Try toggling SSL/TLS settings or check if the server supports the chosen encryption method."
+                    
+            except socket.timeout:
+                logger.error("SMTP connection timeout")
+                return False, f"Connection timeout after {smtp_config.timeout} seconds. Check your network connection and firewall settings."
+                
+            except socket.gaierror as e:
+                logger.error(f"DNS resolution error: {e}")
+                return False, f"Cannot resolve hostname '{smtp_config.host}'. Please check the SMTP host address."
+                
+            except ConnectionRefusedError:
+                logger.error("Connection refused")
+                return False, f"Connection refused by {smtp_config.host}:{smtp_config.port}. Check if the port is correct and not blocked by firewall."
+                
+            except Exception as e:
+                logger.error(f"Unexpected SMTP error: {e}")
+                return False, f"Unexpected error during connection test: {str(e)}"
             
-            server.quit()
-            return True, "SMTP connection successful"
+            finally:
+                if server:
+                    try:
+                        server.quit()
+                    except Exception:
+                        pass
             
         except Exception as e:
-            logger.error(f"SMTP connection test failed: {e}")
-            error_msg = str(e)
-            
-            # Provide more helpful error messages
-            if "WRONG_VERSION_NUMBER" in error_msg:
-                error_msg = "SSL/TLS configuration mismatch. Try toggling the TLS setting or using a different port (587 for TLS, 465 for SSL, 25 for plain)."
-            elif "authentication failed" in error_msg.lower():
-                error_msg = "Authentication failed. Please check your username and password."
-            elif "connection refused" in error_msg.lower():
-                error_msg = "Connection refused. Please check the host and port settings."
-            elif "auth extension not supported" in error_msg.lower():
-                error_msg = "Server doesn't support authentication. Try connecting without username/password or use a different SMTP server."
-            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
-                error_msg = "Invalid characters in SMTP configuration. Please use only ASCII characters for host, username, and password."
-            
-            return False, error_msg
+            logger.error(f"SMTP connection test error: {e}")
+            return False, f"Connection test failed: {str(e)}"
     
-    @staticmethod
-    def replace_variables(content: str, variables: Dict[str, Any]) -> str:
-        """Replace variables in email content"""
+    def _replace_variables(self, content: str, variables: Optional[Dict[str, Any]]) -> str:
+        """Replace template variables in content"""
+        if not variables:
+            return content
+        
         try:
             for key, value in variables.items():
                 placeholder = f"{{{{{key}}}}}"
                 content = content.replace(placeholder, str(value))
             return content
         except Exception as e:
-            logger.error(f"Error replacing variables: {e}")
+            logger.warning(f"Variable replacement error: {e}")
             return content
     
-    @staticmethod
-    def extract_variables(content: str) -> List[str]:
-        """Extract variable names from content"""
-        try:
-            pattern = r'\{\{(\w+)\}\}'
-            variables = re.findall(pattern, content)
-            return list(set(variables))
-        except Exception as e:
-            logger.error(f"Error extracting variables: {e}")
-            return []
-    
-    @staticmethod
-    async def send_email(
+    def _create_email_message(
+        self, 
         smtp_config: SMTPConfig,
         recipient: str,
         subject: str,
         html_content: str,
         text_content: Optional[str] = None,
-        variables: Optional[Dict[str, Any]] = None
-    ) -> tuple[bool, str]:
-        """Send individual email with proper SSL/TLS handling and encoding"""
+        custom_headers: Optional[Dict[str, str]] = None
+    ) -> MIMEMultipart:
+        """Create email message with proper headers"""
+        
+        # Create multipart message
+        message = MIMEMultipart("alternative")
+        
+        # Set basic headers
+        message["Subject"] = subject
+        message["From"] = formataddr((smtp_config.from_name or "", smtp_config.from_email))
+        message["To"] = recipient
+        message["Message-ID"] = make_msgid()
+        message["Date"] = datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S +0000')
+        
+        # Add tracking headers
+        message["X-Kale-Version"] = getattr(settings, 'APP_VERSION', '1.0.0')
+        message["X-Mailer"] = f"Kale Email API v{getattr(settings, 'APP_VERSION', '1.0.0')}"
+        
+        # Add custom headers
+        if custom_headers:
+            for header_name, header_value in custom_headers.items():
+                message[header_name] = header_value
+        
+        # Add text content if provided
+        if text_content:
+            text_part = MIMEText(text_content, "plain", "utf-8")
+            message.attach(text_part)
+        
+        # Add HTML content
+        html_part = MIMEText(html_content, "html", "utf-8")
+        message.attach(html_part)
+        
+        return message
+    
+    async def send_email(
+        self,
+        smtp_config: SMTPConfig,
+        recipient: str,
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None,
+        variables: Optional[Dict[str, Any]] = None,
+        custom_headers: Optional[Dict[str, str]] = None
+    ) -> Tuple[bool, str]:
+        """Send email with robust error handling and connection management"""
+        
+        # Validate recipient
+        if not self._validate_email_address(recipient):
+            return False, "Invalid recipient email address"
+        
+        # Check bounce list
+        if recipient.lower() in self._bounce_tracking:
+            return False, "Recipient is on bounce list"
+        
         try:
-            # Sanitize and validate config data
-            smtp_host = str(smtp_config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
-            smtp_username = str(smtp_config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_username else ''
-            smtp_password = str(smtp_config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_password else ''
-            
             # Replace variables in content
-            if variables:
-                subject = EmailService.replace_variables(subject, variables)
-                html_content = EmailService.replace_variables(html_content, variables)
-                if text_content:
-                    text_content = EmailService.replace_variables(text_content, variables)
+            processed_subject = self._replace_variables(subject, variables)
+            processed_html = self._replace_variables(html_content, variables)
+            processed_text = self._replace_variables(text_content, variables) if text_content else None
             
-            # Create message
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = f"{smtp_config.from_name} <{smtp_config.from_email}>" if smtp_config.from_name else smtp_config.from_email
-            message["To"] = recipient
-            message["Message-ID"] = make_msgid()
-            
-            # Add text content
-            if text_content:
-                text_part = MIMEText(text_content, "plain")
-                message.attach(text_part)
-            
-            # Add HTML content
-            html_part = MIMEText(html_content, "html")
-            message.attach(html_part)
-            
-            # Configure SSL context
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
-            # Send email with proper SSL/TLS configuration
-            send_params = {
-                "hostname": smtp_host,
-                "port": smtp_config.smtp_port,
-                "tls_context": ssl_context
-            }
-            
-            # Only include authentication if username is provided
-            if smtp_username:
-                send_params["username"] = smtp_username
-                
-                # Only include password if provided
-                if smtp_password:
-                    send_params["password"] = smtp_password
-            
-            # Handle different connection types based on port and use_tls setting
-            if smtp_config.smtp_port == 465:
-                # SSL connection (usually port 465)
-                send_params["use_tls"] = True
-            elif smtp_config.use_tls and smtp_config.smtp_port in [587, 25]:
-                # TLS connection (usually port 587 or 25)
-                send_params["start_tls"] = True
-            else:
-                # Custom configuration
-                if smtp_config.use_tls:
-                    send_params["start_tls"] = True
-                else:
-                    # Try to determine the best method based on port
-                    if smtp_config.smtp_port == 465:
-                        send_params["use_tls"] = True
-                    else:
-                        send_params["start_tls"] = True
-            
-            # Send email using aiosmtplib with proper parameter handling
-            # Create SMTP client for better control
-            smtp_client = aiosmtplib.SMTP(
-                hostname=send_params["hostname"],
-                port=send_params["port"],
-                tls_context=send_params["tls_context"],
-                use_tls=send_params.get("use_tls", False),
-                start_tls=send_params.get("start_tls", False)
+            # Create connection configuration
+            connection_config = SMTPConnectionConfig(
+                host=smtp_config.smtp_host,
+                port=smtp_config.smtp_port,
+                username=smtp_config.smtp_username,
+                password=smtp_config.smtp_password,
+                use_tls=smtp_config.use_tls,
+                use_ssl=smtp_config.smtp_port == 465,
+                timeout=30
             )
             
-            await smtp_client.connect()
+            # Create email message
+            message = self._create_email_message(
+                smtp_config=smtp_config,
+                recipient=recipient,
+                subject=processed_subject,
+                html_content=processed_html,
+                text_content=processed_text,
+                custom_headers=custom_headers
+            )
             
-            # Authenticate if credentials provided
-            if send_params.get("username") and send_params.get("password"):
-                await smtp_client.login(send_params["username"], send_params["password"])
+            # Send email using connection pool
+            async with self.connection_manager.get_connection(connection_config) as smtp:
+                await smtp.send_message(message)
             
-            # Send the message
-            await smtp_client.send_message(message)
-            await smtp_client.quit()
-            
+            logger.info(f"Email sent successfully to {recipient}")
             return True, "Email sent successfully"
             
         except Exception as e:
-            logger.error(f"Error sending email: {e}")
             error_msg = str(e)
+            logger.error(f"Failed to send email to {recipient}: {error_msg}")
             
-            # Provide more helpful error messages
-            if "WRONG_VERSION_NUMBER" in error_msg:
-                error_msg = "SSL/TLS configuration mismatch. Please check your SMTP settings."
-            elif "authentication failed" in error_msg.lower():
-                error_msg = "Authentication failed. Please check your username and password."
-            elif "connection refused" in error_msg.lower():
-                error_msg = "Connection refused. Please check the host and port settings."
-            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
-                error_msg = "Invalid characters in email content or SMTP configuration. Please use only ASCII characters."
-            
-            return False, error_msg
+            # Categorize errors for better user experience
+            if "authentication" in error_msg.lower():
+                return False, "SMTP authentication failed. Please check your credentials."
+            elif "connection" in error_msg.lower() or "timeout" in error_msg.lower():
+                return False, "Connection to SMTP server failed. Please check your settings."
+            elif "ssl" in error_msg.lower() or "tls" in error_msg.lower():
+                return False, "SSL/TLS error. Please verify your security settings."
+            elif "quota" in error_msg.lower() or "limit" in error_msg.lower():
+                return False, "SMTP server quota exceeded. Please try again later."
+            else:
+                return False, f"Email delivery failed: {error_msg}"
     
     async def send_email_enhanced(
         self,
@@ -512,194 +734,121 @@ class EmailService:
         smtp_config: Optional[SMTPConfig] = None,
         custom_headers: Optional[Dict[str, str]] = None,
         message_id: Optional[str] = None
-    ) -> tuple[bool, str, str]:
-        """Enhanced email sending method with template support and logging"""
+    ) -> Tuple[bool, str, str]:
+        """Enhanced email sending with template support and comprehensive logging"""
+        
         try:
-            # Get template using database query directly
+            # Get template from database
             template = None
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT * FROM email_templates 
-                    WHERE template_id = ? AND (user_id = ? OR is_public = ? OR is_system_template = ?)
-                """, (template_id, user_id, True, True))
-                template_row = cursor.fetchone()
-                if template_row:
-                    template = dict(template_row)
+                cursor = conn.execute("""
+                    SELECT template_id, subject, html_content, text_content, default_variables
+                    FROM email_templates 
+                    WHERE template_id = ? AND (user_id = ? OR is_public = 1 OR is_system_template = 1)
+                """, (template_id, user_id))
+                
+                row = cursor.fetchone()
+                if row:
+                    template = {
+                        'template_id': row[0],
+                        'subject': row[1],
+                        'html_content': row[2],
+                        'text_content': row[3],
+                        'default_variables': row[4]
+                    }
             
             if not template:
-                return False, f"Template {template_id} not found", ""
+                return False, f"Template '{template_id}' not found", ""
             
-            # Use provided SMTP config or get default for user
+            # Get SMTP configuration
             if not smtp_config:
-                smtp_config = EmailService.get_user_smtp_config(user_id)
+                smtp_config = self.get_user_smtp_config(user_id)
                 if not smtp_config:
                     return False, "No SMTP configuration found", ""
             
-            # Prepare variables (merge template defaults with provided)
+            # Merge variables
             final_variables = {}
             if template.get('default_variables'):
                 try:
                     default_vars = json.loads(template['default_variables'])
                     if isinstance(default_vars, dict):
                         final_variables.update(default_vars)
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, TypeError):
                     pass
             
             if variables:
                 final_variables.update(variables)
             
-            # Replace variables in template content
-            subject = template['subject']
-            html_content = template['html_content']
-            text_content = template.get('text_content')
-            
-            if final_variables:
-                subject = EmailService.replace_variables(subject, final_variables)
-                html_content = EmailService.replace_variables(html_content, final_variables)
-                if text_content:
-                    text_content = EmailService.replace_variables(text_content, final_variables)
-            
-            # Generate message ID if not provided
+            # Generate message ID
             if not message_id:
                 message_id = make_msgid()
             
-            # Create message with custom headers
-            message = MIMEMultipart("alternative")
-            message["Subject"] = subject
-            message["From"] = f"{smtp_config.from_name} <{smtp_config.from_email}>" if smtp_config.from_name else smtp_config.from_email
-            message["To"] = recipient_email
-            message["Message-ID"] = message_id
+            # Add message ID to custom headers
+            if not custom_headers:
+                custom_headers = {}
+            custom_headers["Message-ID"] = message_id
             
-            # Add custom headers
-            if custom_headers:
-                for header_name, header_value in custom_headers.items():
-                    message[header_name] = header_value
-            
-            # Add content parts
-            if text_content:
-                text_part = MIMEText(text_content, "plain")
-                message.attach(text_part)
-            
-            html_part = MIMEText(html_content, "html")
-            message.attach(html_part)
-            
-            # Send using existing send_email logic
-            smtp_host = str(smtp_config.smtp_host).strip().encode('ascii', 'ignore').decode('ascii')
-            smtp_username = str(smtp_config.smtp_username).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_username else ''
-            smtp_password = str(smtp_config.smtp_password).strip().encode('ascii', 'ignore').decode('ascii') if smtp_config.smtp_password else ''
-            
-            # Configure SSL context
-            ssl_context = ssl.create_default_context(cafile=certifi.where())
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
-            # Send email with proper SSL/TLS configuration
-            send_params = {
-                "hostname": smtp_host,
-                "port": smtp_config.smtp_port,
-                "tls_context": ssl_context
-            }
-            
-            # Only include authentication if username is provided
-            if smtp_username:
-                send_params["username"] = smtp_username
-                if smtp_password:
-                    send_params["password"] = smtp_password
-            
-            # Handle different connection types based on port and use_tls setting
-            if smtp_config.smtp_port == 465:
-                send_params["use_tls"] = True
-            elif smtp_config.use_tls and smtp_config.smtp_port in [587, 25]:
-                send_params["start_tls"] = True
-            else:
-                if smtp_config.use_tls:
-                    send_params["start_tls"] = True
-                else:
-                    if smtp_config.smtp_port == 465:
-                        send_params["use_tls"] = True
-                    else:
-                        send_params["start_tls"] = True
-            
-            # Create SMTP client
-            smtp_client = aiosmtplib.SMTP(
-                hostname=send_params["hostname"],
-                port=send_params["port"],
-                tls_context=send_params["tls_context"],
-                use_tls=send_params.get("use_tls", False),
-                start_tls=send_params.get("start_tls", False)
+            # Send email
+            success, error_msg = await self.send_email(
+                smtp_config=smtp_config,
+                recipient=recipient_email,
+                subject=template['subject'],
+                html_content=template['html_content'],
+                text_content=template['text_content'],
+                variables=final_variables,
+                custom_headers=custom_headers
             )
             
-            await smtp_client.connect()
-            
-            # Authenticate if credentials provided
-            if send_params.get("username") and send_params.get("password"):
-                await smtp_client.login(send_params["username"], send_params["password"])
-            
-            # Send the message
-            await smtp_client.send_message(message)
-            await smtp_client.quit()
-            
-            # Log successful email
-            EmailService.log_email(
+            # Log email attempt
+            self.log_email(
                 user_id=user_id,
                 template_id=template_id,
                 recipient=recipient_email,
-                subject=subject,
-                status="sent"
+                subject=template['subject'],
+                status="sent" if success else "failed",
+                error_message=None if success else error_msg
             )
             
             # Update user statistics
-            await self._update_user_email_stats(user_id)
+            if success:
+                await self._update_user_stats(user_id)
             
-            return True, "Email sent successfully", message_id
+            return success, error_msg, message_id
             
         except Exception as e:
-            logger.error(f"Error in send_email_enhanced: {e}")
-            error_msg = str(e)
+            error_msg = f"Enhanced email sending failed: {str(e)}"
+            logger.error(error_msg)
             
-            # Provide more helpful error messages
-            if "WRONG_VERSION_NUMBER" in error_msg:
-                error_msg = "SSL/TLS configuration mismatch. Please check your SMTP settings."
-            elif "authentication failed" in error_msg.lower():
-                error_msg = "Authentication failed. Please check your username and password."
-            elif "connection refused" in error_msg.lower():
-                error_msg = "Connection refused. Please check the host and port settings."
-            elif "ascii" in error_msg.lower() and "encode" in error_msg.lower():
-                error_msg = "Invalid characters in email content or SMTP configuration. Please use only ASCII characters."
-            
-            # Log failed email
-            EmailService.log_email(
+            # Log failed attempt
+            self.log_email(
                 user_id=user_id,
                 template_id=template_id,
                 recipient=recipient_email,
-                subject=subject if 'subject' in locals() else "Unknown",
+                subject="Unknown",
                 status="failed",
                 error_message=error_msg
             )
             
             return False, error_msg, ""
     
-    async def _update_user_email_stats(self, user_id: int) -> None:
+    async def _update_user_stats(self, user_id: int) -> None:
         """Update user email statistics"""
         try:
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                # Update total emails sent and last API call
-                cursor.execute("""
+                conn.execute("""
                     UPDATE users 
-                    SET total_emails_sent = COALESCE(total_emails_sent, 0) + 1,
+                    SET 
+                        total_emails_sent = COALESCE(total_emails_sent, 0) + 1,
                         emails_sent_today = COALESCE(emails_sent_today, 0) + 1,
                         last_api_call = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """, (user_id,))
                 conn.commit()
         except Exception as e:
-            logger.error(f"Error updating user email stats: {e}")
+            logger.error(f"Failed to update user stats: {e}")
     
-    @staticmethod
     def log_email(
+        self,
         user_id: int,
         template_id: str,
         recipient: str,
@@ -707,312 +856,121 @@ class EmailService:
         status: str,
         error_message: Optional[str] = None
     ) -> None:
-        """Log email sending attempt"""
+        """Log email sending attempt with comprehensive details"""
         try:
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
+                conn.execute("""
                     INSERT INTO email_logs 
-                    (user_id, template_id, recipient_email, subject, status, error_message)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (user_id, template_id, recipient_email, subject, status, error_message, sent_at)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 """, (user_id, template_id, recipient, subject, status, error_message))
-                
                 conn.commit()
                 
         except Exception as e:
-            logger.error(f"Error logging email: {e}")
+            logger.error(f"Failed to log email: {e}")
     
-    @staticmethod
-    def get_email_logs(user_id: int, limit: int = 100, offset: int = 0) -> List[EmailLog]:
-        """Get email logs for user"""
+    def get_email_logs(self, user_id: int, limit: int = 100, offset: int = 0) -> List[EmailLog]:
+        """Retrieve email logs for user"""
         try:
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT * FROM email_logs 
+                cursor = conn.execute("""
+                    SELECT id, user_id, template_id, recipient_email, subject, 
+                           status, error_message, sent_at
+                    FROM email_logs 
                     WHERE user_id = ? 
                     ORDER BY sent_at DESC 
                     LIMIT ? OFFSET ?
                 """, (user_id, limit, offset))
                 
-                log_rows = cursor.fetchall()
+                logs = []
+                for row in cursor.fetchall():
+                    logs.append(EmailLog(
+                        id=row[0],
+                        user_id=row[1],
+                        template_id=row[2],
+                        recipient_email=row[3],
+                        subject=row[4],
+                        status=row[5],
+                        error_message=row[6],
+                        sent_at=row[7]
+                    ))
                 
-                return [
-                    EmailLog(
-                        id=row['id'],
-                        user_id=row['user_id'],
-                        template_id=row['template_id'],
-                        recipient_email=row['recipient_email'],
-                        subject=row['subject'],
-                        status=row['status'],
-                        error_message=row['error_message'],
-                        sent_at=row['sent_at']
-                    ) for row in log_rows
-                ]
-            
+                return logs
+                
         except Exception as e:
-            logger.error(f"Error getting email logs: {e}")
+            logger.error(f"Failed to get email logs: {e}")
             return []
     
-    @staticmethod
-    def get_daily_email_count(user_id: int, target_date: Optional[date] = None) -> int:
-        """Get email count for specific date"""
+    def get_daily_email_count(self, user_id: int, target_date: Optional[str] = None) -> int:
+        """Get daily email count for user"""
         try:
             if not target_date:
-                target_date = date.today()
+                target_date = datetime.utcnow().strftime('%Y-%m-%d')
             
             with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT COUNT(*) as count FROM email_logs 
+                cursor = conn.execute("""
+                    SELECT COUNT(*) 
+                    FROM email_logs 
                     WHERE user_id = ? AND DATE(sent_at) = ? AND status = 'sent'
-                """, (user_id, target_date.isoformat()))
+                """, (user_id, target_date))
                 
                 result = cursor.fetchone()
-                return result['count'] if result else 0
-            
+                return result[0] if result else 0
+                
         except Exception as e:
-            logger.error(f"Error getting daily email count: {e}")
+            logger.error(f"Failed to get daily email count: {e}")
             return 0
-
-    async def get_email_metrics(self, user_id: int, days: int = 30) -> EmailMetrics:
-        """Get comprehensive email metrics for analytics"""
-        try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            since_date = datetime.utcnow() - timedelta(days=days)
-            
-            cursor.execute("""
-                SELECT 
-                    COUNT(*) as total_sent,
-                    SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as total_delivered,
-                    SUM(CASE WHEN status = 'bounced' THEN 1 ELSE 0 END) as total_bounced,
-                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as total_failed
-                FROM email_logs 
-                WHERE user_id = ? AND sent_at >= ?
-            """, (user_id, since_date))
-            
-            result = cursor.fetchone()
-            conn.close()
-            
-            if result:
-                total_sent = result[0] or 0
-                total_delivered = result[1] or 0
-                total_bounced = result[2] or 0
-                total_failed = result[3] or 0
-                
-                delivery_rate = (total_delivered / total_sent * 100) if total_sent > 0 else 0
-                bounce_rate = (total_bounced / total_sent * 100) if total_sent > 0 else 0
-                
-                return EmailMetrics(
-                    total_sent=total_sent,
-                    total_delivered=total_delivered,
-                    total_bounced=total_bounced,
-                    total_failed=total_failed,
-                    delivery_rate=delivery_rate,
-                    bounce_rate=bounce_rate
-                )
-            
-            return EmailMetrics()
-            
-        except Exception as e:
-            logger.error(f"Error getting email metrics: {e}")
-            return EmailMetrics()
     
-    async def process_scheduled_emails(self):
-        """Process scheduled emails that are due for delivery"""
+    def add_to_bounce_list(self, email: str, bounce_type: str = "hard", reason: str = "Unknown") -> None:
+        """Add email to bounce list"""
         try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
+            email = email.lower().strip()
+            self._bounce_tracking.add(email)
             
-            cursor.execute("""
-                SELECT * FROM scheduled_emails 
-                WHERE status = 'scheduled' AND schedule_time <= ?
-                ORDER BY schedule_time ASC
-                LIMIT 100
-            """, (datetime.utcnow(),))
-            
-            scheduled_emails = cursor.fetchall()
-            
-            for email_row in scheduled_emails:
-                try:
-                    # Mark as processing
-                    cursor.execute("""
-                        UPDATE scheduled_emails 
-                        SET status = 'processing' 
-                        WHERE id = ?
-                    """, (email_row['id'],))
-                    conn.commit()
-                    
-                    # Get SMTP config
-                    smtp_config = self.get_smtp_config_by_id(email_row['smtp_config_id'])
-                    if not smtp_config:
-                        continue
-                    
-                    # Parse variables
-                    variables = json.loads(email_row['variables']) if email_row['variables'] else {}
-                    
-                    # Send email
-                    success, error_msg, _ = await self.send_email_enhanced(
-                        email_row['user_id'],
-                        email_row['template_id'],
-                        email_row['recipient_email'],
-                        variables,
-                        smtp_config,
-                        message_id=email_row['message_id']
-                    )
-                    
-                    # Update status
-                    status = 'sent' if success else 'failed'
-                    cursor.execute("""
-                        UPDATE scheduled_emails 
-                        SET status = ?, error_message = ?, sent_at = ?
-                        WHERE id = ?
-                    """, (status, error_msg if not success else None, datetime.utcnow(), email_row['id']))
-                    conn.commit()
-                    
-                except Exception as e:
-                    logger.error(f"Error processing scheduled email {email_row['id']}: {e}")
-                    cursor.execute("""
-                        UPDATE scheduled_emails 
-                        SET status = 'failed', error_message = ?
-                        WHERE id = ?
-                    """, (str(e), email_row['id']))
-                    conn.commit()
-            
-            conn.close()
-            
-        except Exception as e:
-            logger.error(f"Error processing scheduled emails: {e}")
-    
-    def get_smtp_config_by_id(self, config_id: int) -> Optional[SMTPConfig]:
-        """Get SMTP config by ID"""
-        try:
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT * FROM smtp_configs WHERE id = ?", (config_id,))
-            config_row = cursor.fetchone()
-            conn.close()
-            
-            if config_row:
-                # Decrypt password
-                decrypted_password = self._decrypt_password(config_row[4])
-                
-                return SMTPConfig(
-                    id=config_row[0],
-                    user_id=config_row[1],
-                    smtp_host=config_row[2],
-                    smtp_port=config_row[3],
-                    smtp_username=config_row[4],
-                    smtp_password=decrypted_password,
-                    use_tls=bool(config_row[5]),
-                    from_email=config_row[6],
-                    from_name=config_row[7],
-                    is_active=bool(config_row[8]),
-                    created_at=config_row[9],
-                    updated_at=config_row[10]
-                )
-                
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error getting SMTP config: {e}")
-            return None
-    
-    async def handle_webhook(self, webhook_data: Dict[str, Any]) -> bool:
-        """Handle delivery webhooks from email providers"""
-        try:
-            message_id = webhook_data.get('message_id')
-            event_type = webhook_data.get('event')  # delivered, bounced, clicked, opened
-            timestamp = webhook_data.get('timestamp')
-            
-            if not message_id or not event_type:
-                return False
-            
-            # Update delivery tracking
-            if message_id in self.delivery_tracking:
-                self.delivery_tracking[message_id].status = event_type
-                self.delivery_tracking[message_id].timestamp = datetime.fromtimestamp(timestamp) if timestamp else datetime.utcnow()
-            
-            # Update database
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
-            
-            if event_type == 'bounced':
-                # Add to bounce list
-                cursor.execute("""
+            with db_manager.get_db_connection() as conn:
+                conn.execute("""
                     INSERT OR REPLACE INTO email_bounces 
                     (email, bounce_type, bounce_reason, created_at)
-                    VALUES (?, ?, ?, ?)
-                """, (
-                    webhook_data.get('email'),
-                    webhook_data.get('bounce_type', 'hard'),
-                    webhook_data.get('reason', 'Unknown'),
-                    datetime.utcnow()
-                ))
-            
-            # Update email log status
-            cursor.execute("""
-                UPDATE email_logs 
-                SET status = ?, updated_at = ?
-                WHERE message_id = ?
-            """, (event_type, datetime.utcnow(), message_id))
-            
-            conn.commit()
-            conn.close()
-            
-            return True
-            
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                """, (email, bounce_type, reason))
+                conn.commit()
+                
         except Exception as e:
-            logger.error(f"Webhook handling error: {e}")
-            return False
+            logger.error(f"Failed to add email to bounce list: {e}")
     
-    async def cleanup_old_data(self, days_to_keep: int = 90):
-        """Clean up old email logs and tracking data"""
+    async def cleanup_old_data(self, days_to_keep: int = 90) -> None:
+        """Clean up old email logs and connection pool"""
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
             
-            conn = db_manager.get_db_connection()
-            cursor = conn.cursor()
+            with db_manager.get_db_connection() as conn:
+                # Clean old email logs
+                cursor = conn.execute("""
+                    DELETE FROM email_logs 
+                    WHERE sent_at < ?
+                """, (cutoff_date,))
+                deleted_logs = cursor.rowcount
+                
+                # Clean old bounce records (keep them longer)
+                bounce_cutoff = datetime.utcnow() - timedelta(days=days_to_keep * 2)
+                cursor = conn.execute("""
+                    DELETE FROM email_bounces 
+                    WHERE created_at < ? AND bounce_type != 'hard'
+                """, (bounce_cutoff,))
+                deleted_bounces = cursor.rowcount
+                
+                conn.commit()
             
-            # Clean old email logs
-            cursor.execute("""
-                DELETE FROM email_logs 
-                WHERE sent_at < ?
-            """, (cutoff_date,))
+            # Reload bounce list
+            self._load_bounce_list()
             
-            # Clean old scheduled emails
-            cursor.execute("""
-                DELETE FROM scheduled_emails 
-                WHERE (status = 'sent' OR status = 'failed') AND created_at < ?
-            """, (cutoff_date,))
+            # Clean connection pool
+            self.connection_manager._cleanup_stale_connections()
             
-            # Clean old bounce records (keep them longer)
-            bounce_cutoff = datetime.utcnow() - timedelta(days=days_to_keep * 2)
-            cursor.execute("""
-                DELETE FROM email_bounces 
-                WHERE created_at < ?
-            """, (bounce_cutoff,))
-            
-            conn.commit()
-            conn.close()
-            
-            # Clean in-memory tracking
-            old_keys = [
-                k for k, v in self.delivery_tracking.items() 
-                if v.timestamp < cutoff_date
-            ]
-            for key in old_keys:
-                del self.delivery_tracking[key]
-            
-            logger.info(f"Cleaned up email data older than {days_to_keep} days")
+            logger.info(f"Cleaned up {deleted_logs} email logs and {deleted_bounces} bounce records")
             
         except Exception as e:
-            logger.error(f"Data cleanup error: {e}")
+            logger.error(f"Data cleanup failed: {e}")
 
+# Global email service instance
 email = EmailService()

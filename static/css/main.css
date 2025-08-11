@@ -718,3 +718,140 @@ h1, h2, h3, h4, h5, h6 {
         backdrop-filter: none !important;
     }
 }
+
+/* Performance optimizations for smooth navbar and UI animations */
+.navbar, .navbar *, 
+.user-menu, .user-menu *,
+.mobile-menu, .mobile-menu * {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Optimized user menu animations */
+.user-menu {
+    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(0.95) translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.user-menu.show {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Optimized mobile menu animations */
+.mobile-menu {
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+}
+
+.mobile-menu.show {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Smooth button interactions with hardware acceleration */
+button, .btn {
+    transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+}
+
+button:hover, .btn:hover {
+    transform: translateY(-1px) translateZ(0);
+}
+
+button:active, .btn:active {
+    transform: translateY(0) translateZ(0);
+}
+
+/* Optimized loading states */
+.loading-spinner {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Prevent layout shifts during loading */
+.stats-container {
+    min-height: 120px;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/* Smooth tab transitions */
+.tab-content {
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Optimized scrolling performance */
+.scrollable-content {
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+}
+
+/* Reduce repaints on hover effects */
+.card:hover, .list-item:hover {
+    transform: translateY(-2px) translateZ(0);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+}
+
+/* Hardware acceleration for modals */
+.modal, .modal-backdrop {
+    will-change: opacity, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Optimized focus states */
+*:focus {
+    outline-offset: 2px;
+    transition: outline-offset 0.1s ease-in-out;
+}
+
+/* Smooth navbar sticky behavior */
+.navbar.sticky {
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                backdrop-filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: background-color, box-shadow;
+}
+
+/* Optimize high-frequency animations */
+@media (prefers-reduced-motion: no-preference) {
+    .animate-on-scroll {
+        will-change: transform, opacity;
+        transform: translateZ(0);
+    }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .user-menu, .mobile-menu, button, .btn, .card {
+        transition: none !important;
+        animation: none !important;
+        will-change: auto !important;
+    }
+}
+
+/* GPU layer creation for better performance */
+.performance-layer {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}

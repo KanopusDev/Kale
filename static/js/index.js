@@ -29,9 +29,6 @@ function setupEventListeners() {
         e.preventDefault();
         
         switch (action) {
-            case 'scroll-to-demo':
-                scrollToDemo();
-                break;
             case 'show-register':
                 showRegister();
                 break;
@@ -289,16 +286,6 @@ function handleContactForm(event) {
 }
 
 // Auth modal functions
-function scrollToDemo() {
-    const demoSection = document.getElementById('demo') || document.getElementById('features');
-    if (demoSection) {
-        demoSection.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-        });
-    }
-}
-
 function showLogin() {
     const authOverlay = document.getElementById('auth-overlay');
     const loginForm = document.getElementById('login-form');

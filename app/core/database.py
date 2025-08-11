@@ -221,6 +221,7 @@ class DatabaseManager:
                         html_content TEXT NOT NULL,
                         text_content TEXT,
                         variables JSON,
+                        default_variables JSON,
                         is_public BOOLEAN DEFAULT FALSE,
                         is_system_template BOOLEAN DEFAULT FALSE,
                         is_active BOOLEAN DEFAULT TRUE,
@@ -509,6 +510,20 @@ class DatabaseManager:
                 cursor.execute("ALTER TABLE smtp_configs_new RENAME TO smtp_configs")
                 
                 logger.info("Migrated smtp_configs table to fix column names")
+            
+            # Check email_templates table and add missing columns
+            cursor.execute("PRAGMA table_info(email_templates)")
+            template_columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add missing columns to email_templates table
+            missing_template_columns = [
+                ("default_variables", "JSON")
+            ]
+            
+            for column_name, column_def in missing_template_columns:
+                if column_name not in template_columns:
+                    cursor.execute(f"ALTER TABLE email_templates ADD COLUMN {column_name} {column_def}")
+                    logger.info(f"Added missing column {column_name} to email_templates table")
             
             # Check api_usage_logs table and add missing columns
             cursor.execute("PRAGMA table_info(api_usage_logs)")

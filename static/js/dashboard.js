@@ -1,6 +1,6 @@
 /**
  * Dashboard JavaScript for Kale Email API Platform
- * Production-ready dashboard functionality and UI management
+ * Production-ready dashboard functionality and UI management with performance optimizations
  **/
 
 'use strict';
@@ -11,6 +11,32 @@ let userStats = {};
 let templatesData = [];
 let apiKeysData = [];
 let smtpConfig = null;
+
+// Performance optimizations
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
+
+const throttle = (func, limit) => {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+};
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
@@ -34,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Main initialization function
 function initializeDashboard() {
     setupEventListeners();
+    setupNavbarOptimizations();
     loadUserInfo();
     loadDashboardStats();
     loadTemplates();
@@ -41,17 +68,130 @@ function initializeDashboard() {
     loadAPIKeys();
 }
 
-// Set up event listeners using event delegation
-function setupEventListeners() {
-    // Navigation event delegation
-    document.addEventListener('click', function(e) {
-        const target = e.target;
-        const action = target.dataset.action;
+// Setup optimized navbar interactions
+function setupNavbarOptimizations() {
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userMenu = document.getElementById('user-menu');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    // Optimized user menu functionality
+    if (userMenuButton && userMenu) {
+        let isUserMenuOpen = false;
         
+        const toggleUserMenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isUserMenuOpen = !isUserMenuOpen;
+            userMenuButton.setAttribute('aria-expanded', isUserMenuOpen);
+            
+            if (isUserMenuOpen) {
+                userMenu.classList.remove('hidden');
+                userMenu.classList.add('show');
+                // Focus management for accessibility
+                userMenu.querySelector('button')?.focus();
+            } else {
+                userMenu.classList.remove('show');
+                userMenu.classList.add('hidden');
+            }
+        };
+        
+        userMenuButton.addEventListener('click', toggleUserMenu);
+        
+        // Optimized outside click detection
+        const handleOutsideClick = (e) => {
+            if (isUserMenuOpen && !userMenuButton.contains(e.target) && !userMenu.contains(e.target)) {
+                isUserMenuOpen = false;
+                userMenuButton.setAttribute('aria-expanded', 'false');
+                userMenu.classList.remove('show');
+                userMenu.classList.add('hidden');
+            }
+        };
+        
+        // Use passive event listener for better performance
+        document.addEventListener('click', handleOutsideClick, { passive: true });
+        
+        // Keyboard navigation
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isUserMenuOpen) {
+                isUserMenuOpen = false;
+                userMenuButton.setAttribute('aria-expanded', 'false');
+                userMenu.classList.remove('show');
+                userMenu.classList.add('hidden');
+                userMenuButton.focus();
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeyDown);
+    }
+    
+    // Optimized mobile menu functionality
+    if (mobileMenuToggle && mobileMenu) {
+        let isMobileMenuOpen = false;
+        
+        const toggleMobileMenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isMobileMenuOpen = !isMobileMenuOpen;
+            mobileMenuToggle.setAttribute('aria-expanded', isMobileMenuOpen);
+            
+            if (isMobileMenuOpen) {
+                mobileMenu.classList.remove('hidden');
+                mobileMenu.classList.add('show');
+                // Update icon to close
+                mobileMenuToggle.innerHTML = `
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                `;
+            } else {
+                mobileMenu.classList.remove('show');
+                mobileMenu.classList.add('hidden');
+                // Update icon to menu
+                mobileMenuToggle.innerHTML = `
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                `;
+            }
+        };
+        
+        mobileMenuToggle.addEventListener('click', toggleMobileMenu);
+        
+        // Close mobile menu on window resize to desktop
+        const handleResize = throttle(() => {
+            if (window.innerWidth >= 768 && isMobileMenuOpen) {
+                isMobileMenuOpen = false;
+                mobileMenuToggle.setAttribute('aria-expanded', 'false');
+                mobileMenu.classList.remove('show');
+                mobileMenu.classList.add('hidden');
+                mobileMenuToggle.innerHTML = `
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                `;
+            }
+        }, 250);
+        
+        window.addEventListener('resize', handleResize, { passive: true });
+    }
+}
+
+// Set up event listeners using optimized event delegation
+function setupEventListeners() {
+    // Use optimized event delegation with early returns
+    const handleDocumentClick = (e) => {
+        const target = e.target.closest('[data-action]');
+        if (!target) return;
+        
+        const action = target.dataset.action;
         if (!action) return;
         
         e.preventDefault();
         
+        // Use switch with performance optimizations
         switch (action) {
             case 'logout':
                 KaleAPI.logout();
@@ -105,18 +245,22 @@ function setupEventListeners() {
                 hideModal(target.dataset.modal);
                 break;
         }
-    });
+    };
     
-// Tab navigation
-    document.addEventListener('click', function(e) {
-        if (e.target.dataset.tab) {
-            e.preventDefault();
-            showTab(e.target.dataset.tab);
+    // Tab navigation with optimized handling
+    const handleTabClick = (e) => {
+        const target = e.target.closest('[data-tab]');
+        if (!target) return;
+        
+        e.preventDefault();
+        const tabName = target.dataset.tab;
+        if (tabName) {
+            showTab(tabName);
         }
-    });
+    };
     
-    // Form submissions
-    document.addEventListener('submit', function(e) {
+    // Form submission with optimized handling
+    const handleFormSubmit = (e) => {
         e.preventDefault();
         
         switch (e.target.id) {
@@ -130,42 +274,23 @@ function setupEventListeners() {
                 handleSendTestEmail(e.target);
                 break;
         }
-    });
+    };
     
-    // User menu toggle
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userMenu = document.getElementById('user-menu');
-    if (userMenuButton && userMenu) {
-        userMenuButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            userMenu.classList.toggle('hidden');
-        });
-        
-        // Close menu when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!userMenuButton.contains(e.target) && !userMenu.contains(e.target)) {
-                userMenu.classList.add('hidden');
-            }
-        });
-        
-        // Close menu when pressing Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                userMenu.classList.add('hidden');
-            }
-        });
-    }
+    // Use passive listeners where possible for better performance
+    document.addEventListener('click', handleDocumentClick, { passive: false });
+    document.addEventListener('click', handleTabClick, { passive: false });
+    document.addEventListener('submit', handleFormSubmit, { passive: false });
 }
 
-// Load user information
+// Load user information with optimized error handling
 async function loadUserInfo() {
+    const userInfoElement = document.getElementById('user-info');
+    
     try {
         const user = await KaleAPI.apiRequest('/auth/me');
-        const userInfo = document.getElementById('user-info');
         
-        if (userInfo) {
-            userInfo.textContent = user.username;
+        if (userInfoElement && user.username) {
+            userInfoElement.textContent = user.username;
         }
         
         // Update API endpoint with username
@@ -173,32 +298,57 @@ async function loadUserInfo() {
         
     } catch (error) {
         console.error('Failed to load user info:', error);
+        
         // If we can't load user info but we have a token, show generic info
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
                 const user = JSON.parse(storedUser);
-                const userInfo = document.getElementById('user-info');
-                if (userInfo) {
-                    userInfo.textContent = user.username || 'User';
+                if (userInfoElement) {
+                    userInfoElement.textContent = user.username || 'User';
                 }
                 updateAPIEndpoint(user.username);
             } catch (e) {
                 console.error('Failed to parse stored user:', e);
+                if (userInfoElement) {
+                    userInfoElement.textContent = 'User';
+                }
+            }
+        } else {
+            // Fallback for missing user data
+            if (userInfoElement) {
+                userInfoElement.textContent = 'User';
             }
         }
     }
 }
 
-// Load dashboard statistics
+// Load dashboard statistics with optimized loading
 async function loadDashboardStats() {
+    const loadingIndicator = document.getElementById('stats-loading');
+    const statsContainer = document.getElementById('dashboard-stats');
+    
     try {
+        // Show loading state if elements exist
+        if (loadingIndicator) loadingIndicator.style.display = 'block';
+        if (statsContainer) statsContainer.style.opacity = '0.6';
+        
         const response = await KaleAPI.apiRequest('/dashboard/stats');
         userStats = response;
         updateDashboardStats(response);
         updateRecentActivity(response.recent_activity || []);
+        
+        // Hide loading state
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (statsContainer) statsContainer.style.opacity = '1';
+        
     } catch (error) {
         console.error('Failed to load dashboard stats:', error);
+        
+        // Hide loading state
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (statsContainer) statsContainer.style.opacity = '1';
+        
         // Show default stats instead of error
         const defaultStats = {
             total_emails: 0,
@@ -221,12 +371,24 @@ function updateDashboardStats(stats) {
         'response-time': `${stats.avg_response_time || 125}ms`
     };
     
+    // Batch DOM updates for better performance
+    const updateQueue = [];
+    
     Object.entries(statElements).forEach(([id, value]) => {
         const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
+        if (element && element.textContent !== value) {
+            updateQueue.push({ element, value });
         }
     });
+    
+    // Apply all updates in a single batch
+    if (updateQueue.length > 0) {
+        requestAnimationFrame(() => {
+            updateQueue.forEach(({ element, value }) => {
+                element.textContent = value;
+            });
+        });
+    }
     
     // Update trend indicators
     const trendElements = {

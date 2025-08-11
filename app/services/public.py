@@ -438,35 +438,11 @@ class PublicAPIService:
             return None
     
     async def _get_user_smtp_config(self, user_id: int) -> Optional[SMTPConfig]:
-        """Get user's active SMTP configuration"""
+        """Get user's active SMTP configuration with proper password decryption"""
         try:
-            with db_manager.get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT * FROM smtp_configs 
-                    WHERE user_id = ? AND is_active = 1 
-                    ORDER BY created_at DESC LIMIT 1
-                """, (user_id,))
-                
-                row = cursor.fetchone()
-            
-            if row:
-                return SMTPConfig(
-                    id=row['id'],
-                    user_id=row['user_id'],
-                    smtp_host=row['smtp_host'],
-                    smtp_port=row['smtp_port'],
-                    smtp_username=row['smtp_username'],
-                    smtp_password=row['smtp_password'],  # Will be decrypted by email service
-                    use_tls=bool(row['use_tls']),
-                    from_email=row['from_email'],
-                    from_name=row['from_name'],
-                    is_active=bool(row['is_active']),
-                    created_at=row['created_at']
-                )
-            
-            return None
+            # Use the email service's method to get properly decrypted config
+            smtp_config = self.email.get_user_smtp_config(user_id)
+            return smtp_config
             
         except Exception as e:
             logger.error(f"SMTP config retrieval error: {e}")
