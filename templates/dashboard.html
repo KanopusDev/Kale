@@ -677,7 +677,7 @@
                                     <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold mr-2">POST</span>
                                     <span id="api-endpoint" class="text-gray-900">https://kale.kanopus.org/pradyumntandon/{template_id}</span>
                                 </div>
-                                <button data-action="copy-api-endpoint" class="absolute right-3 top-3 p-2 text-gray-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all">
+                                <button data-action="copy-api-endpoint" data-copy-text="" class="absolute right-3 top-3 p-2 text-gray-500 hover:text-primary-600 hover:bg-white rounded-lg transition-all" title="Copy API Endpoint">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                     </svg>
@@ -699,8 +699,11 @@
       "company": "Example Inc"
     }
   }'</code></pre>
-                                <button data-action="copy-curl-example" class="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors">
-                                    📋 Copy cURL Example
+                                <button data-action="copy-curl-example" data-copy-text="" class="mt-2 text-xs text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center" title="Copy cURL Example">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Copy cURL Example
                                 </button>
                             </div>
                         </div>
@@ -816,7 +819,7 @@
     <!-- Send Test Email Modal -->
     <div id="send-test-modal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden">
         <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-2xl max-w-md w-full p-8">
+            <div class="bg-white rounded-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-gray-900">Send Test Email</h2>
                     <button data-action="close-modal" data-modal="send-test-modal" class="text-gray-400 hover:text-gray-600">
@@ -826,26 +829,46 @@
                     </button>
                 </div>
                 
-                <form id="send-test-form" class="space-y-4">
+                <form id="send-test-form" class="space-y-6">
+                    <!-- Template Selection -->
                     <div>
-                        <label for="test-email" class="block text-sm font-medium text-gray-700 mb-2">To Email</label>
-                        <input type="email" id="test-email" name="to_email" required 
+                        <label for="test-template" class="block text-sm font-medium text-gray-700 mb-2">Select Template (Optional)</label>
+                        <select id="test-template" name="template_id" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus">
+                            <option value="">Send basic test email (no template)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Leave blank to send a simple test message</p>
+                    </div>
+
+                    <!-- Template Variables Info -->
+                    <div class="template-variables-info" style="display: none;"></div>
+
+                    <!-- Recipient Email -->
+                    <div>
+                        <label for="test-recipient" class="block text-sm font-medium text-gray-700 mb-2">Recipient Email</label>
+                        <input type="email" id="test-recipient" name="recipient" required 
                                class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
                                placeholder="test@example.com">
                     </div>
 
+                    <!-- Template Variables -->
                     <div>
-                        <label for="test-subject" class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                        <input type="text" id="test-subject" name="subject" required 
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus"
-                               placeholder="Test Email from Kale">
+                        <label for="test-variables" class="block text-sm font-medium text-gray-700 mb-2">Template Variables (JSON)</label>
+                        <textarea id="test-variables" name="variables" rows="4"
+                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg input-focus font-mono text-sm"
+                                  placeholder='{"name": "John Doe", "company": "Example Inc"}'></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Enter variables as JSON or use key=value format (one per line)</p>
                     </div>
 
+                    <!-- Action Buttons -->
                     <div class="flex space-x-4">
-                        <button type="submit" class="flex-1 bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-4 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
-                            Send Test
+                        <button type="submit" class="flex-1 bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-medium hover:from-primary-600 hover:to-secondary-600 transition-all">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                            Send Test Email
                         </button>
-                        <button type="button" data-action="close-modal" data-modal="send-test-modal" class="flex-1 bg-gray-200 text-gray-800 px-4 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all">
+                        <button type="button" data-action="close-modal" data-modal="send-test-modal" class="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all">
                             Cancel
                         </button>
                     </div>

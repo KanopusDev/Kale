@@ -61,11 +61,19 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeDashboard() {
     setupEventListeners();
     setupNavbarOptimizations();
-    loadUserInfo();
+    loadUserInfo(); // This will call updateAPIEndpoint
     loadDashboardStats();
     loadTemplates();
     loadSMTPConfig();
     loadAPIKeys();
+    
+    // Ensure API endpoints are updated after a short delay
+    setTimeout(() => {
+        const storedUser = KaleAPI.getFromStorage('user');
+        if (storedUser && storedUser.username) {
+            updateAPIEndpoint(storedUser.username);
+        }
+    }, 500);
 }
 
 // Setup optimized navbar interactions
@@ -220,6 +228,9 @@ function setupEventListeners() {
             case 'send-test':
                 showSendTestModal(target.dataset.templateId);
                 break;
+            case 'copy-template':
+                copyTemplate(target.dataset.templateId);
+                break;
             case 'generate-api-key':
                 generateAPIKey();
                 break;
@@ -293,31 +304,43 @@ async function loadUserInfo() {
             userInfoElement.textContent = user.username;
         }
         
-        // Update API endpoint with username
+        // Update API endpoint with username and force update copy buttons
         updateAPIEndpoint(user.username);
+        
+        // Store user info for future use
+        KaleAPI.saveToStorage('user', user);
         
     } catch (error) {
         console.error('Failed to load user info:', error);
         
-        // If we can't load user info but we have a token, show generic info
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
+        // If we can't load user info but we have a token, show stored info
+        const storedUser = KaleAPI.getFromStorage('user');
+        if (storedUser && storedUser.username) {
+            if (userInfoElement) {
+                userInfoElement.textContent = storedUser.username;
+            }
+            updateAPIEndpoint(storedUser.username);
+        } else {
+            // Try to extract username from token as fallback
             try {
-                const user = JSON.parse(storedUser);
-                if (userInfoElement) {
-                    userInfoElement.textContent = user.username || 'User';
+                const token = localStorage.getItem('auth_token');
+                if (token) {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const username = payload.sub || payload.username;
+                    if (username) {
+                        if (userInfoElement) {
+                            userInfoElement.textContent = username;
+                        }
+                        updateAPIEndpoint(username);
+                    }
                 }
-                updateAPIEndpoint(user.username);
             } catch (e) {
-                console.error('Failed to parse stored user:', e);
+                console.error('Failed to parse token:', e);
+                // Final fallback
                 if (userInfoElement) {
                     userInfoElement.textContent = 'User';
                 }
-            }
-        } else {
-            // Fallback for missing user data
-            if (userInfoElement) {
-                userInfoElement.textContent = 'User';
+                updateAPIEndpoint('your-username');
             }
         }
     }
@@ -515,6 +538,13 @@ function showTab(tabName) {
             break;
         case 'api-keys':
             loadAPIKeys();
+            // Update API endpoints when viewing API keys tab
+            setTimeout(() => {
+                const storedUser = KaleAPI.getFromStorage('user');
+                if (storedUser && storedUser.username) {
+                    updateAPIEndpoint(storedUser.username);
+                }
+            }, 100);
             break;
     }
 }
@@ -523,23 +553,65 @@ function showTab(tabName) {
 async function loadTemplates() {
     try {
         KaleAPI.showLoading(document.body);
-        const response = await KaleAPI.apiRequest('/templates/');
         
-        // Handle the response properly - templates should be directly in the response array
-        let templates = [];
+        // Load both user templates and public/system templates
+        const [userResponse, publicResponse] = await Promise.all([
+            KaleAPI.apiRequest('/templates/'),
+            KaleAPI.apiRequest('/templates/public')
+        ]);
         
-        if (Array.isArray(response)) {
-            templates = response;
-        } else if (response && Array.isArray(response.templates)) {
-            templates = response.templates;
-        } else if (response && response.data && Array.isArray(response.data)) {
-            templates = response.data;
-        } else {
-            templates = [];
+        console.log('User templates API response:', userResponse);
+        console.log('Public templates API response:', publicResponse);
+        
+        // Handle user templates response
+        let userTemplates = [];
+        if (Array.isArray(userResponse)) {
+            userTemplates = userResponse;
+        } else if (userResponse && Array.isArray(userResponse.templates)) {
+            userTemplates = userResponse.templates;
+        } else if (userResponse && userResponse.data && Array.isArray(userResponse.data)) {
+            userTemplates = userResponse.data;
         }
         
+        // Handle public templates response
+        let publicTemplates = [];
+        if (Array.isArray(publicResponse)) {
+            publicTemplates = publicResponse;
+        } else if (publicResponse && Array.isArray(publicResponse.templates)) {
+            publicTemplates = publicResponse.templates;
+        } else if (publicResponse && publicResponse.data && Array.isArray(publicResponse.data)) {
+            publicTemplates = publicResponse.data;
+        }
+        
+        // Combine user templates and public templates
+        // User templates first, then public templates
+        const allTemplates = [...userTemplates, ...publicTemplates];
+        
         // Ensure templates is always an array and store it
-        templatesData = Array.isArray(templates) ? templates : [];
+        templatesData = Array.isArray(allTemplates) ? allTemplates : [];
+        
+        // CRITICAL: Validate each template's ID fields to debug the issue
+        templatesData = templatesData.map(template => {
+            console.log(`Template validation - Name: ${template.name}, DB_ID: ${template.id}, template_id: ${template.template_id}, Type: ${template.is_system_template ? 'System' : template.is_public ? 'Public' : 'User'}`);
+            
+            // Ensure template_id is always a string and never a number
+            if (!template.template_id || typeof template.template_id !== 'string') {
+                console.error('Invalid template_id detected:', template);
+                // Convert numeric template_id to string if needed (fallback)
+                if (template.template_id && typeof template.template_id === 'number') {
+                    console.warn('Converting numeric template_id to string:', template.template_id);
+                    template.template_id = String(template.template_id);
+                } else {
+                    console.error('Template missing valid template_id, skipping:', template);
+                    return null; // Skip invalid templates
+                }
+            }
+            
+            return template;
+        }).filter(template => template !== null); // Remove invalid templates
+        
+        console.log('Processed templates data:', templatesData);
+        console.log(`Total templates loaded: ${templatesData.length} (User: ${userTemplates.length}, Public/System: ${publicTemplates.length})`);
         displayTemplates(templatesData);
         
     } catch (error) {
@@ -581,30 +653,67 @@ function displayTemplates(templates) {
     }
     
     container.innerHTML = templates.map(template => {
-        // Use the correct property names from the API response
-        const templateId = template.id || template.template_id;
+        // CRITICAL: Always use template_id (string identifier) for API operations
+        // The database id should NEVER be used for API endpoints
+        console.log('Template data:', template);
+        
+        const templateId = template.template_id; // Only use template_id, never database id
+        if (!templateId || typeof templateId !== 'string') {
+            console.error('Template missing valid template_id:', template);
+            return ''; // Skip templates without proper template_id
+        }
+        
         const templateName = template.name || 'Unnamed Template';
         const templateDesc = template.description || 'No description provided';
         const templateCategory = template.category || 'General';
         const templateVars = template.variables || [];
         const createdAt = template.created_at || new Date().toISOString();
         
+        // Determine template type for display
+        const isSystemTemplate = template.is_system_template === true;
+        const isPublicTemplate = template.is_public === true && !isSystemTemplate;
+        const isUserTemplate = !isSystemTemplate && !isPublicTemplate;
+        
+        // Template type badge and colors
+        let templateTypeBadge = '';
+        let cardClasses = 'bg-white rounded-lg shadow-lg p-6 card-hover';
+        
+        if (isSystemTemplate) {
+            templateTypeBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">📖 System Template</span>';
+            cardClasses = 'bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg shadow-lg p-6 card-hover';
+        } else if (isPublicTemplate) {
+            templateTypeBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">🌍 Public Template</span>';
+            cardClasses = 'bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-lg p-6 card-hover';
+        } else {
+            templateTypeBadge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">👤 My Template</span>';
+        }
+        
+        console.log(`Template: ${templateName}, ID for buttons: ${templateId}, Type: ${isSystemTemplate ? 'System' : isPublicTemplate ? 'Public' : 'User'}`);
+        
         return `
-            <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+            <div class="${cardClasses}">
                 <div class="flex items-start justify-between mb-4">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900">${templateName}</h3>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h3 class="text-lg font-semibold text-gray-900">${templateName}</h3>
+                            ${templateTypeBadge}
+                        </div>
                         <p class="text-sm text-gray-600">${templateDesc}</p>
                     </div>
-                    <div class="flex space-x-2">
-                        <button data-action="edit-template" data-template-id="${templateId}" 
-                                class="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors">Edit</button>
-                        <button data-action="delete-template" data-template-id="${templateId}" 
-                                class="text-red-600 hover:text-red-800 text-sm font-medium transition-colors">Delete</button>
+                    <div class="flex space-x-2 ml-4">
+                        ${isUserTemplate ? `
+                            <button data-action="edit-template" data-template-id="${templateId}" 
+                                    class="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors">Edit</button>
+                            <button data-action="delete-template" data-template-id="${templateId}" 
+                                    class="text-red-600 hover:text-red-800 text-sm font-medium transition-colors">Delete</button>
+                        ` : `
+                            <button data-action="copy-template" data-template-id="${templateId}" 
+                                    class="text-green-600 hover:text-green-800 text-sm font-medium transition-colors">Copy</button>
+                        `}
                     </div>
                 </div>
                 
-                <div class="mb-4">
+                <div class="mb-4 flex flex-wrap gap-2">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(templateCategory)}">
                         ${templateCategory}
                     </span>
@@ -634,6 +743,16 @@ function getCategoryColor(category) {
             return 'bg-blue-100 text-blue-800';
         case 'notification':
             return 'bg-green-100 text-green-800';
+        case 'onboarding':
+            return 'bg-indigo-100 text-indigo-800';
+        case 'authentication':
+            return 'bg-red-100 text-red-800';
+        case 'business':
+            return 'bg-emerald-100 text-emerald-800';
+        case 'system':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'general':
+            return 'bg-gray-100 text-gray-800';
         default:
             return 'bg-gray-100 text-gray-800';
     }
@@ -720,10 +839,20 @@ async function handleCreateTemplate(form) {
         const isEditMode = form.dataset.editMode === 'true';
         const templateId = form.dataset.templateId;
         
+        console.log('Form submission - Edit mode:', isEditMode, 'Template ID:', templateId, 'Type:', typeof templateId);
+
         let response;
         if (isEditMode && templateId) {
+            // CRITICAL: Ensure we're using string template_id for API operations
+            if (typeof templateId !== 'string') {
+                console.error('Invalid template ID type for update:', templateId);
+                KaleAPI.showNotification('Invalid template identifier', 'error');
+                return;
+            }
+            
             // Update existing template
-            response = await KaleAPI.apiRequest(`/templates/${templateId}/`, {
+            console.log('Updating template with ID:', templateId);
+            response = await KaleAPI.apiRequest(`/templates/${templateId}`, {
                 method: 'PUT',
                 body: templateData
             });
@@ -774,10 +903,23 @@ async function editTemplate(templateId) {
     }
     
     try {
-        // Find the template in our data
-        const template = templatesData.find(t => (t.id == templateId || t.template_id == templateId));
+        // Find the template in our data using template_id (string identifier)
+        console.log('editTemplate called with templateId:', templateId, 'type:', typeof templateId);
+        console.log('Available templates:', templatesData.map(t => ({ name: t.name, template_id: t.template_id, db_id: t.id })));
+        
+        // CRITICAL: Only search by template_id (string), never by database id
+        const template = templatesData.find(t => t.template_id === templateId);
+        console.log('Found template:', template);
+        
         if (!template) {
-            KaleAPI.showNotification('Template not found', 'error');
+            KaleAPI.showNotification('Template not found in local data', 'error');
+            return;
+        }
+        
+        // CRITICAL: Prevent editing of system and public templates
+        if (template.is_system_template || template.is_public) {
+            const templateType = template.is_system_template ? 'system' : 'public';
+            KaleAPI.showNotification(`Cannot edit ${templateType} templates. Use the "Copy" button to create an editable copy.`, 'error');
             return;
         }
         
@@ -790,8 +932,14 @@ async function editTemplate(templateId) {
             return;
         }
         
-        // Use the correct ID field name from the template
-        const realTemplateId = template.id || template.template_id;
+        // IMPORTANT: Use template_id (string identifier) for API operations
+        const realTemplateId = template.template_id;
+        console.log('Using template_id for API operations:', realTemplateId);
+        
+        if (!realTemplateId) {
+            KaleAPI.showNotification('Invalid template identifier', 'error');
+            return;
+        }
         
         // Set form fields
         const nameField = form.querySelector('[name="name"]');
@@ -852,9 +1000,26 @@ async function deleteTemplate(templateId) {
         return;
     }
     
+    // CRITICAL: Find the template and check if it can be deleted
+    const template = templatesData.find(t => t.template_id === templateId);
+    if (template && (template.is_system_template || template.is_public)) {
+        const templateType = template.is_system_template ? 'system' : 'public';
+        KaleAPI.showNotification(`Cannot delete ${templateType} templates.`, 'error');
+        return;
+    }
+    
     try {
         KaleAPI.showLoading(document.body);
-        await KaleAPI.apiRequest(`/templates/${templateId}/`, {
+        console.log('Deleting template with ID:', templateId, 'type:', typeof templateId);
+        
+        // CRITICAL: Ensure we're using string template_id for API call
+        if (typeof templateId !== 'string') {
+            console.error('Invalid template ID type for deletion:', templateId);
+            KaleAPI.showNotification('Invalid template identifier', 'error');
+            return;
+        }
+        
+        await KaleAPI.apiRequest(`/templates/${templateId}`, {
             method: 'DELETE'
         });
         
@@ -863,6 +1028,64 @@ async function deleteTemplate(templateId) {
         
     } catch (error) {
         KaleAPI.handleApiError(error, 'Failed to delete template');
+    } finally {
+        KaleAPI.hideLoading(document.body);
+    }
+}
+
+async function copyTemplate(templateId) {
+    if (!templateId || typeof templateId !== 'string') {
+        KaleAPI.showNotification('Invalid template ID', 'error');
+        return;
+    }
+    
+    try {
+        // Find the template in our data
+        const sourceTemplate = templatesData.find(t => t.template_id === templateId);
+        if (!sourceTemplate) {
+            KaleAPI.showNotification('Template not found', 'error');
+            return;
+        }
+        
+        // Determine the template type for the confirmation message
+        const templateType = sourceTemplate.is_system_template ? 'system' : 'public';
+        
+        if (!confirm(`Copy this ${templateType} template to your templates? This will create a new editable template in your account.`)) {
+            return;
+        }
+        
+        KaleAPI.showLoading(document.body);
+        
+        // Generate a unique template_id for the copy
+        const timestamp = Date.now();
+        const copyTemplateId = `${sourceTemplate.template_id}-copy-${timestamp}`;
+        
+        // Prepare the template data for creation
+        const templateData = {
+            name: `${sourceTemplate.name} (Copy)`,
+            template_id: copyTemplateId,
+            subject: sourceTemplate.subject,
+            html_content: sourceTemplate.html_content,
+            text_content: sourceTemplate.text_content || '',
+            variables: sourceTemplate.variables || [],
+            category: sourceTemplate.category || '',
+            description: `Copy of ${templateType} template: ${sourceTemplate.description || sourceTemplate.name}`
+        };
+        
+        console.log('Copying template with data:', templateData);
+        
+        // Create the new template
+        const response = await KaleAPI.apiRequest('/templates/', {
+            method: 'POST',
+            body: templateData
+        });
+        
+        KaleAPI.showNotification('Template copied successfully! You can now edit your copy.', 'success');
+        await loadTemplates(); // Reload templates to show the new copy
+        
+    } catch (error) {
+        console.error('Copy template error:', error);
+        KaleAPI.handleApiError(error, 'Failed to copy template');
     } finally {
         KaleAPI.hideLoading(document.body);
     }
@@ -970,26 +1193,98 @@ async function testSMTPConfig() {
 // Send test email functions
 function showSendTestModal(templateId = null) {
     const modal = document.getElementById('send-test-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        const form = document.getElementById('send-test-form');
-        if (form) {
-            form.reset();
-            // Set template ID if provided
-            if (templateId) {
-                const templateIdField = form.querySelector('input[name="template_id"]');
-                if (templateIdField) {
-                    templateIdField.value = templateId;
-                } else {
-                    // Create hidden input if it doesn't exist
-                    const hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = 'template_id';
-                    hiddenInput.value = templateId;
-                    form.appendChild(hiddenInput);
-                }
+    const form = document.getElementById('send-test-form');
+    
+    if (!modal || !form) {
+        KaleAPI.showNotification('Send test modal not found', 'error');
+        return;
+    }
+    
+    // Reset form
+    form.reset();
+    
+    // Populate template dropdown with current templates
+    const templateSelect = form.querySelector('select[name="template_id"]');
+    if (templateSelect && Array.isArray(templatesData)) {
+        // Start with the default option
+        let options = '<option value="">Send basic test email (no template)</option>';
+        
+        // Add templates to dropdown
+        templatesData.forEach(template => {
+            // CRITICAL: Use template_id (string identifier) for API operations
+            const tId = template.template_id;
+            if (!tId || typeof tId !== 'string') {
+                console.error('Template missing valid template_id in dropdown:', template);
+                return; // Skip templates without proper template_id
             }
+            
+            const tName = template.name || 'Unnamed Template';
+            const selected = templateId && (tId === templateId) ? 'selected' : '';
+            options += `<option value="${tId}" ${selected}>${tName}</option>`;
+            console.log(`Adding template to dropdown: ${tName} with ID: ${tId} (selected: ${selected})`);
+        });
+        
+        templateSelect.innerHTML = options;
+        
+        // Add change event listener to show/hide variables info
+        templateSelect.addEventListener('change', function() {
+            updateTemplateVariablesInfo(this.value);
+        });
+        
+        // If template is pre-selected, show variables info
+        if (templateId) {
+            updateTemplateVariablesInfo(templateId);
         }
+    }
+    
+    modal.classList.remove('hidden');
+    
+    // Focus on recipient field
+    const recipientField = form.querySelector('input[name="recipient"]');
+    if (recipientField) {
+        setTimeout(() => recipientField.focus(), 100);
+    }
+}
+
+function updateTemplateVariablesInfo(templateId) {
+    const variablesInfo = document.querySelector('.template-variables-info');
+    if (!variablesInfo) return;
+    
+    if (!templateId) {
+        variablesInfo.style.display = 'none';
+        return;
+    }
+    
+    const selectedTemplate = templatesData.find(t => t.template_id === templateId);
+    console.log('Looking for template with template_id:', templateId);
+    console.log('Found template:', selectedTemplate);
+    console.log('All available templates:', templatesData.map(t => ({ name: t.name, template_id: t.template_id, db_id: t.id })));
+    if (selectedTemplate && selectedTemplate.variables && selectedTemplate.variables.length > 0) {
+        const variables = selectedTemplate.variables;
+        variablesInfo.innerHTML = `
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-medium text-blue-900 mb-2">Available Variables for "${selectedTemplate.name}":</h4>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    ${variables.map(variable => `
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded font-mono">\${${variable}}</span>
+                    `).join('')}
+                </div>
+                <p class="text-xs text-blue-700">Use these variable names in your JSON below.</p>
+            </div>
+        `;
+        variablesInfo.style.display = 'block';
+        
+        // Pre-populate variables textarea with template variables
+        const variablesTextarea = document.querySelector('#test-variables');
+        if (variablesTextarea && !variablesTextarea.value.trim()) {
+            const exampleVars = {};
+            variables.forEach(variable => {
+                exampleVars[variable] = `Sample ${variable}`;
+            });
+            variablesTextarea.value = JSON.stringify(exampleVars, null, 2);
+        }
+    } else {
+        variablesInfo.style.display = 'none';
     }
 }
 
@@ -998,14 +1293,69 @@ async function handleSendTestEmail(form) {
         KaleAPI.showLoading(document.body);
         const formData = KaleAPI.getFormData(form);
         
-        await KaleAPI.apiRequest('/email/send-test', {
+        console.log('Send test form data:', formData);
+        
+        // Validate required fields
+        const recipient = formData.recipient || formData.to_email;
+        if (!recipient || !KaleAPI.validateEmail(recipient)) {
+            KaleAPI.showNotification('Please enter a valid recipient email address', 'error');
+            return;
+        }
+        
+        // Prepare test email data according to the API specification
+        const testData = {
+            recipient_email: recipient,  // Use recipient_email as expected by the API
+            template_id: formData.template_id || null,
+            variables: {}
+        };
+        
+        console.log('Template ID being sent to API:', testData.template_id, 'type:', typeof testData.template_id);
+        
+        // Validate template_id if provided
+        if (testData.template_id && typeof testData.template_id !== 'string') {
+            console.error('Invalid template_id type:', testData.template_id);
+            KaleAPI.showNotification('Invalid template selection', 'error');
+            return;
+        }
+        
+        // Parse variables if provided
+        if (formData.variables && formData.variables.trim()) {
+            try {
+                testData.variables = JSON.parse(formData.variables);
+            } catch (error) {
+                // If JSON parsing fails, try simple key=value parsing
+                const variableLines = formData.variables.split('\n');
+                variableLines.forEach(line => {
+                    if (line.trim()) {
+                        const [key, ...valueParts] = line.split('=');
+                        if (key && valueParts.length > 0) {
+                            const value = valueParts.join('=').trim();
+                            testData.variables[key.trim()] = value;
+                        }
+                    }
+                });
+            }
+        }
+        
+        // If no template is selected, send a simple test message
+        if (!testData.template_id) {
+            testData.subject = 'Test Email from Kale API Platform';
+            testData.message = 'This is a test email sent from your Kale Email API Platform dashboard. If you receive this email, your SMTP configuration is working correctly!';
+        }
+        
+        console.log('Sending test email with data:', testData);
+        
+        // Use the correct endpoint for sending test emails
+        const response = await KaleAPI.apiRequest('/email/send-test', {
             method: 'POST',
-            body: formData
+            body: testData
         });
         
-        KaleAPI.showNotification('Test email sent successfully!', 'success');
+        KaleAPI.showNotification('Test email sent successfully! Check your inbox.', 'success');
         hideModal('send-test-modal');
+        
     } catch (error) {
+        console.error('Send test email error:', error);
         KaleAPI.handleApiError(error, 'Failed to send test email');
     } finally {
         KaleAPI.hideLoading(document.body);
@@ -1321,20 +1671,24 @@ function copyAPIKey(key) {
 // Live API endpoint utilities
 function updateAPIEndpoint(username = null) {
     const endpoint = document.getElementById('api-endpoint');
-    if (endpoint) {
-        if (!username) {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            username = user.username || 'your-username';
-        }
-        const baseUrl = KaleAPI.getCurrentDomain();
-        endpoint.textContent = `${baseUrl}/${username}/{template_id}`;
+    const curlExample = document.getElementById('curl-example');
+    
+    if (!username) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        username = user.username || 'your-username';
     }
     
-    // Update cURL example with username
-    const curlExample = document.getElementById('curl-example');
-    if (curlExample && username) {
-        const baseUrl = KaleAPI.getCurrentDomain();
-        curlExample.textContent = `curl -X POST "${baseUrl}/${username}/welcome-email" \\
+    const baseUrl = KaleAPI.getCurrentDomain();
+    const fullEndpoint = `${baseUrl}/${username}/{template_id}`;
+    
+    // Update API endpoint display
+    if (endpoint) {
+        endpoint.textContent = fullEndpoint;
+    }
+    
+    // Update cURL example with real username and proper formatting
+    if (curlExample) {
+        const curlExampleText = `curl -X POST "${baseUrl}/${username}/welcome-email" \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -d '{
@@ -1344,20 +1698,76 @@ function updateAPIEndpoint(username = null) {
       "company": "Example Inc"
     }
   }'`;
+        curlExample.textContent = curlExampleText;
+    }
+    
+    // Update all copy buttons with current username
+    updateCopyButtonsWithUsername(username);
+}
+
+function updateCopyButtonsWithUsername(username) {
+    const baseUrl = KaleAPI.getCurrentDomain();
+    
+    // Update copy endpoint button
+    const copyEndpointBtn = document.querySelector('[data-action="copy-api-endpoint"]');
+    if (copyEndpointBtn) {
+        copyEndpointBtn.dataset.copyText = `${baseUrl}/${username}/{template_id}`;
+    }
+    
+    // Update copy curl button
+    const copyCurlBtn = document.querySelector('[data-action="copy-curl-example"]');
+    if (copyCurlBtn) {
+        const curlText = `curl -X POST "${baseUrl}/${username}/welcome-email" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -d '{
+    "recipients": ["user@example.com"],
+    "variables": {
+      "name": "John Doe",
+      "company": "Example Inc"
+    }
+  }'`;
+        copyCurlBtn.dataset.copyText = curlText;
     }
 }
 
 function copyApiEndpoint() {
+    const copyEndpointBtn = document.querySelector('[data-action="copy-api-endpoint"]');
     const endpoint = document.getElementById('api-endpoint');
-    if (endpoint) {
-        KaleAPI.copyToClipboard(endpoint.textContent);
+    
+    let textToCopy = '';
+    
+    // Try to get text from data attribute first
+    if (copyEndpointBtn && copyEndpointBtn.dataset.copyText) {
+        textToCopy = copyEndpointBtn.dataset.copyText;
+    } else if (endpoint) {
+        textToCopy = endpoint.textContent;
+    }
+    
+    if (textToCopy) {
+        KaleAPI.copyToClipboard(textToCopy);
+    } else {
+        KaleAPI.showNotification('No endpoint to copy', 'error');
     }
 }
 
 function copyCurlExample() {
+    const copyCurlBtn = document.querySelector('[data-action="copy-curl-example"]');
     const curlExample = document.getElementById('curl-example');
-    if (curlExample) {
-        KaleAPI.copyToClipboard(curlExample.textContent);
+    
+    let textToCopy = '';
+    
+    // Try to get text from data attribute first
+    if (copyCurlBtn && copyCurlBtn.dataset.copyText) {
+        textToCopy = copyCurlBtn.dataset.copyText;
+    } else if (curlExample) {
+        textToCopy = curlExample.textContent;
+    }
+    
+    if (textToCopy) {
+        KaleAPI.copyToClipboard(textToCopy);
+    } else {
+        KaleAPI.showNotification('No cURL example to copy', 'error');
     }
 }
 
